@@ -389,6 +389,9 @@ final class AssembledProperties {
         String sanitized = sanitize(rawValue);
         String base = prefix + '_' + sanitized;
         if (!SourceVersion.isIdentifier(base) || SourceVersion.isKeyword(base)) {
+            base = prefix + "_v" + sanitized;
+        }
+        if (!SourceVersion.isIdentifier(base) || SourceVersion.isKeyword(base)) {
             base = prefix + "_v";
         }
         return uniqueName(base, used);
@@ -420,10 +423,13 @@ final class AssembledProperties {
             }
         }
         String sanitized = sb.toString().replaceAll("_+", "_");
-        if (sanitized.isEmpty() || !Character.isJavaIdentifierStart(sanitized.charAt(0))) {
-            sanitized = "v" + sanitized;
+        if (sanitized.startsWith("_")) {
+            sanitized = sanitized.substring(1);
         }
-        return sanitized;
+        if (sanitized.endsWith("_")) {
+            sanitized = sanitized.substring(0, sanitized.length() - 1);
+        }
+        return sanitized.isEmpty() ? "v" : sanitized;
     }
 
     static String decapitalize(String name) {
