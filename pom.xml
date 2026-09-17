@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.xuemingyuan88</groupId>
+    <groupId>com.pojo</groupId>
     <artifactId>branch-kit</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>
@@ -46,7 +46,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.xuemingyuan88.branchkit.App</mainClass>
+                            <mainClass>com.pojo.branchkit.App</mainClass>
                         </manifest>
                     </archive>
                 </configuration>

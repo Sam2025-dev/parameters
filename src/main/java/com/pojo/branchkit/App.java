@@ -1,4 +1,4 @@
-package com.xuemingyuan88.branchkit;
+package com.pojo.branchkit;
 
 public final class App {
 
