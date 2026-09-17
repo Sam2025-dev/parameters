@@ -53,13 +53,13 @@ final class AssembledProperties {
         if (!mergeExistingFields(type, byName, error)) {
             return null;
         }
-        if (!addOfProperties(type, mirror, elements, byName, error)) {
-            return null;
-        }
         if (!addNamedStrings(type, annotation.String(), byName, error)) {
             return null;
         }
         if (!addPrimitiveShorthands(type, annotation, byName, error)) {
+            return null;
+        }
+        if (!addOfProperties(type, mirror, elements, byName, error)) {
             return null;
         }
         if (byName.isEmpty()) {

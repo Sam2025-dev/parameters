@@ -74,8 +74,8 @@ class ParametersProcessorTest {
                 """
                         package com.example;
 
-                        import com.pojo.parameters.Of;
                         import com.pojo.parameters.Parameters;
+                        import com.pojo.parameters.Parameters.Of;
 
                         @Parameters(
                                 String = {"userName"},
@@ -271,8 +271,8 @@ class ParametersProcessorTest {
                 """
                         package com.example;
 
-                        import com.pojo.parameters.Of;
                         import com.pojo.parameters.Parameters;
+                        import com.pojo.parameters.Parameters.Of;
 
                         @Parameters(of = @Of(Class = Integer.class, names = {"id"}))
                         public class ConflictVO extends ConflictVO__Parameters {
@@ -301,8 +301,8 @@ class ParametersProcessorTest {
                 """
                         package com.example;
 
-                        import com.pojo.parameters.Of;
                         import com.pojo.parameters.Parameters;
+                        import com.pojo.parameters.Parameters.Of;
 
                         @Parameters(
                                 int_ = {1},
@@ -355,8 +355,8 @@ class ParametersProcessorTest {
                 """
                         package com.example;
 
-                        import com.pojo.parameters.Of;
                         import com.pojo.parameters.Parameters;
+                        import com.pojo.parameters.Parameters.Of;
 
                         @Parameters(of = @Of(Class = Address.class))
                         public class DerivedNameVO extends DerivedNameVO__Parameters {
@@ -378,8 +378,8 @@ class ParametersProcessorTest {
                 """
                         package com.example;
 
-                        import com.pojo.parameters.Of;
                         import com.pojo.parameters.Parameters;
+                        import com.pojo.parameters.Parameters.Of;
 
                         @Parameters(of = @Of(Class = Long.class))
                         public class BadOfVO extends BadOfVO__Parameters {
@@ -398,8 +398,8 @@ class ParametersProcessorTest {
                 """
                         package com.example;
 
-                        import com.pojo.parameters.Of;
                         import com.pojo.parameters.Parameters;
+                        import com.pojo.parameters.Parameters.Of;
 
                         @Parameters(of = @Of(Class = Long.class, names = {"123id"}))
                         public class BadNameVO extends BadNameVO__Parameters {

@@ -1,8 +1,8 @@
 package com.branchkit.vo;
 
 import com.branchkit.po.Address;
-import com.pojo.parameters.Of;
 import com.pojo.parameters.Parameters;
+import com.pojo.parameters.Parameters.Of;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;

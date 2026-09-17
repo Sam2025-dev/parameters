@@ -17,8 +17,8 @@ the annotation properties.
 `int_1` and `long_18`). `of` declares a class plus `String[] names` for that class.
 
 ```java
-import com.pojo.parameters.Of;
 import com.pojo.parameters.Parameters;
+import com.pojo.parameters.Parameters.Of;
 import lombok.Data;
 
 @Data
