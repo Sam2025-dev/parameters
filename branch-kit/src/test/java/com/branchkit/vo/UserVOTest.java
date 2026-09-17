@@ -14,16 +14,16 @@ class UserVOTest {
         UserVO vo = new UserVO();
         assertNull(vo.getUserName());
         assertNull(vo.getHomeAddress());
-        assertEquals(1, vo.getInt_1());
-        assertEquals(2, vo.getInt_2());
-        assertEquals(3, vo.getInt_3());
+        assertEquals(0, vo.getCountryCode());
+        assertEquals(0, vo.getCityCode());
+        assertEquals(0, vo.getAreaCode());
 
         vo.setUserName("erin");
-        vo.setInt_2(22);
+        vo.setCityCode(22);
         vo.setHomeAddress(new Address("Beijing", "Chang'an Avenue"));
 
         assertEquals("erin", vo.getUserName());
-        assertEquals(22, vo.getInt_2());
+        assertEquals(22, vo.getCityCode());
         assertEquals("Beijing", vo.getHomeAddress().getCity());
     }
 

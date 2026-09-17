@@ -20,7 +20,7 @@ class ParametersProcessorTest {
 
                         import com.pojo.parameters.Parameters;
 
-                        @Parameters(String = {"userName"}, int_ = {1, 2, 3})
+                        @Parameters(String = {"userName"}, int_ = {"countryCode", "cityCode", "areaCode"})
                         public class DemoVO extends DemoVO__Parameters {
                         }
                         """);
@@ -35,15 +35,15 @@ class ParametersProcessorTest {
         assertThat(compilation)
                 .generatedSourceFile("com.example.DemoVO__Parameters")
                 .contentsAsUtf8String()
-                .contains("private int int_1 = 1;");
+                .contains("private int countryCode;");
         assertThat(compilation)
                 .generatedSourceFile("com.example.DemoVO__Parameters")
                 .contentsAsUtf8String()
-                .contains("private int int_2 = 2;");
+                .contains("private int cityCode;");
         assertThat(compilation)
                 .generatedSourceFile("com.example.DemoVO__Parameters")
                 .contentsAsUtf8String()
-                .contains("private int int_3 = 3;");
+                .contains("private int areaCode;");
         assertThat(compilation)
                 .generatedSourceFile("com.example.DemoVO__Parameters")
                 .contentsAsUtf8String()
@@ -55,7 +55,7 @@ class ParametersProcessorTest {
         assertThat(compilation)
                 .generatedSourceFile("com.example.DemoVO__Parameters")
                 .contentsAsUtf8String()
-                .contains("public int getInt_1()");
+                .contains("public int getCountryCode()");
     }
 
     @Test
@@ -79,19 +79,25 @@ class ParametersProcessorTest {
 
                         @Parameters(
                                 String = {"userName"},
-                                boolean_ = {true},
-                                byte_ = {1},
-                                short_ = {2},
-                                int_ = {3},
-                                long_ = {4L},
-                                char_ = {'Z'},
-                                float_ = {1.5f},
-                                double_ = {2.25},
+                                Boolean = {"enabledFlag"},
+                                Byte = {"levelBox"},
+                                Short = {"rankBox"},
+                                Integer = {"countBox"},
+                                Long = {"id"},
+                                Character = {"gradeBox"},
+                                Float = {"scoreBox"},
+                                Double = {"amountBox"},
+                                boolean_ = {"enabled"},
+                                byte_ = {"level"},
+                                short_ = {"rank"},
+                                int_ = {"count"},
+                                long_ = {"age"},
+                                char_ = {"grade"},
+                                float_ = {"score"},
+                                double_ = {"amount"},
                                 of = {
                                         @Of(Class = Address.class),
-                                        @Of(Class = Long.class, names = {"id"}),
-                                        @Of(Class = String[].class, names = {"tags"}),
-                                        @Of(Class = int.class, names = {"count"})
+                                        @Of(Class = String[].class, names = {"tags"})
                                 }
                         )
                         public class AllTypesVO extends AllTypesVO__Parameters {
@@ -102,19 +108,25 @@ class ParametersProcessorTest {
         assertThat(compilation).succeeded();
         var generated = assertThat(compilation).generatedSourceFile("com.example.AllTypesVO__Parameters").contentsAsUtf8String();
         generated.contains("private String userName;");
-        generated.contains("private boolean boolean_true = true;");
-        generated.contains("private byte byte_1 = (byte) 1;");
-        generated.contains("private short short_2 = (short) 2;");
-        generated.contains("private int int_3 = 3;");
-        generated.contains("private long long_4 = 4L;");
-        generated.contains("private char char_Z = 'Z';");
-        generated.contains("private float float_1_5 = 1.5f;");
-        generated.contains("private double double_2_25 = 2.25;");
-        generated.contains("private com.example.Address address;");
+        generated.contains("private Boolean enabledFlag;");
+        generated.contains("private Byte levelBox;");
+        generated.contains("private Short rankBox;");
+        generated.contains("private Integer countBox;");
         generated.contains("private Long id;");
-        generated.contains("private String[] tags;");
+        generated.contains("private Character gradeBox;");
+        generated.contains("private Float scoreBox;");
+        generated.contains("private Double amountBox;");
+        generated.contains("private boolean enabled;");
+        generated.contains("private byte level;");
+        generated.contains("private short rank;");
         generated.contains("private int count;");
-        generated.contains("public boolean isBoolean_true()");
+        generated.contains("private long age;");
+        generated.contains("private char grade;");
+        generated.contains("private float score;");
+        generated.contains("private double amount;");
+        generated.contains("private com.example.Address address;");
+        generated.contains("private String[] tags;");
+        generated.contains("public boolean isEnabled()");
         generated.contains("public com.example.Address getAddress()");
     }
 
@@ -214,30 +226,23 @@ class ParametersProcessorTest {
     }
 
     @Test
-    void disambiguatesDuplicateIntValues() {
+    void rejectsInvalidIntPropertyName() {
         JavaFileObject source = JavaFileObjects.forSourceString(
-                "com.example.DupIntVO",
+                "com.example.BadIntVO",
                 """
                         package com.example;
 
                         import com.pojo.parameters.Parameters;
 
-                        @Parameters(int_ = {1, 1})
-                        public class DupIntVO extends DupIntVO__Parameters {
+                        @Parameters(int_ = {"123oops"})
+                        public class BadIntVO extends BadIntVO__Parameters {
                         }
                         """);
 
         Compilation compilation = compile(source);
 
-        assertThat(compilation).succeeded();
-        assertThat(compilation)
-                .generatedSourceFile("com.example.DupIntVO__Parameters")
-                .contentsAsUtf8String()
-                .contains("private int int_1 = 1;");
-        assertThat(compilation)
-                .generatedSourceFile("com.example.DupIntVO__Parameters")
-                .contentsAsUtf8String()
-                .contains("private int int_1_2 = 1;");
+        assertThat(compilation).failed();
+        assertThat(compilation).hadErrorContaining("Invalid int property name");
     }
 
     @Test
@@ -305,8 +310,8 @@ class ParametersProcessorTest {
                         import com.pojo.parameters.Parameters.Of;
 
                         @Parameters(
-                                int_ = {1},
-                                long_ = {18L},
+                                int_ = {"countryCode"},
+                                long_ = {"age"},
                                 of = @Of(Class = Address.class, names = {"homeAddress", "workAddress"})
                         )
                         public class OfVO extends OfVO__Parameters {
@@ -318,11 +323,11 @@ class ParametersProcessorTest {
         assertThat(compilation)
                 .generatedSourceFile("com.example.OfVO__Parameters")
                 .contentsAsUtf8String()
-                .contains("private int int_1 = 1;");
+                .contains("private int countryCode;");
         assertThat(compilation)
                 .generatedSourceFile("com.example.OfVO__Parameters")
                 .contentsAsUtf8String()
-                .contains("private long long_18 = 18L;");
+                .contains("private long age;");
         assertThat(compilation)
                 .generatedSourceFile("com.example.OfVO__Parameters")
                 .contentsAsUtf8String()

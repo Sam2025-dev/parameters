@@ -53,10 +53,55 @@ final class AssembledProperties {
         if (!mergeExistingFields(type, byName, error)) {
             return null;
         }
-        if (!addNamedStrings(type, annotation.String(), byName, error)) {
+        if (!addNamedProperties(type, annotation.String(), "String", false, byName, error)) {
             return null;
         }
-        if (!addPrimitiveShorthands(type, annotation, byName, error)) {
+        if (!addNamedProperties(type, annotation.Boolean(), "Boolean", false, byName, error)) {
+            return null;
+        }
+        if (!addNamedProperties(type, annotation.Byte(), "Byte", false, byName, error)) {
+            return null;
+        }
+        if (!addNamedProperties(type, annotation.Short(), "Short", false, byName, error)) {
+            return null;
+        }
+        if (!addNamedProperties(type, annotation.Integer(), "Integer", false, byName, error)) {
+            return null;
+        }
+        if (!addNamedProperties(type, annotation.Long(), "Long", false, byName, error)) {
+            return null;
+        }
+        if (!addNamedProperties(type, annotation.Character(), "Character", false, byName, error)) {
+            return null;
+        }
+        if (!addNamedProperties(type, annotation.Float(), "Float", false, byName, error)) {
+            return null;
+        }
+        if (!addNamedProperties(type, annotation.Double(), "Double", false, byName, error)) {
+            return null;
+        }
+        if (!addNamedProperties(type, annotation.boolean_(), "boolean", true, byName, error)) {
+            return null;
+        }
+        if (!addNamedProperties(type, annotation.byte_(), "byte", false, byName, error)) {
+            return null;
+        }
+        if (!addNamedProperties(type, annotation.short_(), "short", false, byName, error)) {
+            return null;
+        }
+        if (!addNamedProperties(type, annotation.int_(), "int", false, byName, error)) {
+            return null;
+        }
+        if (!addNamedProperties(type, annotation.long_(), "long", false, byName, error)) {
+            return null;
+        }
+        if (!addNamedProperties(type, annotation.char_(), "char", false, byName, error)) {
+            return null;
+        }
+        if (!addNamedProperties(type, annotation.float_(), "float", false, byName, error)) {
+            return null;
+        }
+        if (!addNamedProperties(type, annotation.double_(), "double", false, byName, error)) {
             return null;
         }
         if (!addOfProperties(type, mirror, elements, byName, error)) {
@@ -166,81 +211,19 @@ final class AssembledProperties {
         return true;
     }
 
-    private static boolean addNamedStrings(
+    private static boolean addNamedProperties(
             TypeElement type,
             String[] names,
+            String typeSource,
+            boolean primitiveBoolean,
             Map<String, AssembledProperty> byName,
             BiConsumer<Element, String> error) {
         for (String name : names) {
             if (!SourceVersion.isIdentifier(name) || SourceVersion.isKeyword(name)) {
-                error.accept(type, "Invalid String property name: " + name);
+                error.accept(type, "Invalid " + typeSource + " property name: " + name);
                 return false;
             }
-            AssembledProperty property = new AssembledProperty(name, "String", null, false, false);
-            if (!putMerged(type, byName, property, error)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static boolean addPrimitiveShorthands(
-            TypeElement type,
-            Parameters annotation,
-            Map<String, AssembledProperty> byName,
-            BiConsumer<Element, String> error) {
-        for (boolean value : annotation.boolean_()) {
-            String name = uniqueLiteralName("boolean", Boolean.toString(value), byName.keySet());
-            AssembledProperty property = new AssembledProperty(name, "boolean", Boolean.toString(value), true, false);
-            if (!putMerged(type, byName, property, error)) {
-                return false;
-            }
-        }
-        for (byte value : annotation.byte_()) {
-            String name = uniqueLiteralName("byte", Byte.toString(value), byName.keySet());
-            AssembledProperty property = new AssembledProperty(name, "byte", "(byte) " + value, false, false);
-            if (!putMerged(type, byName, property, error)) {
-                return false;
-            }
-        }
-        for (short value : annotation.short_()) {
-            String name = uniqueLiteralName("short", Short.toString(value), byName.keySet());
-            AssembledProperty property = new AssembledProperty(name, "short", "(short) " + value, false, false);
-            if (!putMerged(type, byName, property, error)) {
-                return false;
-            }
-        }
-        for (int value : annotation.int_()) {
-            String name = uniqueLiteralName("int", Integer.toString(value), byName.keySet());
-            AssembledProperty property = new AssembledProperty(name, "int", Integer.toString(value), false, false);
-            if (!putMerged(type, byName, property, error)) {
-                return false;
-            }
-        }
-        for (long value : annotation.long_()) {
-            String name = uniqueLiteralName("long", Long.toString(value), byName.keySet());
-            AssembledProperty property = new AssembledProperty(name, "long", value + "L", false, false);
-            if (!putMerged(type, byName, property, error)) {
-                return false;
-            }
-        }
-        for (char value : annotation.char_()) {
-            String name = uniqueLiteralName("char", charName(value), byName.keySet());
-            AssembledProperty property = new AssembledProperty(name, "char", charLiteral(value), false, false);
-            if (!putMerged(type, byName, property, error)) {
-                return false;
-            }
-        }
-        for (float value : annotation.float_()) {
-            String name = uniqueLiteralName("float", Float.toString(value), byName.keySet());
-            AssembledProperty property = new AssembledProperty(name, "float", value + "f", false, false);
-            if (!putMerged(type, byName, property, error)) {
-                return false;
-            }
-        }
-        for (double value : annotation.double_()) {
-            String name = uniqueLiteralName("double", Double.toString(value), byName.keySet());
-            AssembledProperty property = new AssembledProperty(name, "double", Double.toString(value), false, false);
+            AssembledProperty property = new AssembledProperty(name, typeSource, null, primitiveBoolean, false);
             if (!putMerged(type, byName, property, error)) {
                 return false;
             }
@@ -371,53 +354,6 @@ final class AssembledProperties {
         return "this." + property.name();
     }
 
-    static String uniqueLiteralName(String prefix, String rawValue, Set<String> used) {
-        String sanitized = sanitize(rawValue);
-        String base = prefix + '_' + sanitized;
-        if (!SourceVersion.isIdentifier(base) || SourceVersion.isKeyword(base)) {
-            base = prefix + "_v" + sanitized;
-        }
-        if (!SourceVersion.isIdentifier(base) || SourceVersion.isKeyword(base)) {
-            base = prefix + "_v";
-        }
-        return uniqueName(base, used);
-    }
-
-    static String uniqueName(String base, Set<String> used) {
-        if (!used.contains(base)) {
-            return base;
-        }
-        int suffix = 2;
-        String candidate;
-        do {
-            candidate = base + '_' + suffix;
-            suffix++;
-        } while (used.contains(candidate));
-        return candidate;
-    }
-
-    static String sanitize(String raw) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < raw.length(); i++) {
-            char c = raw.charAt(i);
-            if (Character.isJavaIdentifierPart(c) && c != '$') {
-                sb.append(c);
-            } else if (c == '-') {
-                sb.append('m');
-            } else {
-                sb.append('_');
-            }
-        }
-        String sanitized = sb.toString().replaceAll("_+", "_");
-        if (sanitized.startsWith("_")) {
-            sanitized = sanitized.substring(1);
-        }
-        if (sanitized.endsWith("_")) {
-            sanitized = sanitized.substring(0, sanitized.length() - 1);
-        }
-        return sanitized.isEmpty() ? "v" : sanitized;
-    }
-
     static String decapitalize(String name) {
         if (name == null || name.isEmpty()) {
             return name;
@@ -434,26 +370,6 @@ final class AssembledProperties {
         String core = array < 0 ? rendered : rendered.substring(0, array);
         int lastDot = core.lastIndexOf('.');
         return lastDot < 0 ? core : core.substring(lastDot + 1);
-    }
-
-    static String charName(char value) {
-        if (Character.isJavaIdentifierPart(value) && value != '$') {
-            return Character.toString(value);
-        }
-        return Integer.toString((int) value);
-    }
-
-    static String charLiteral(char value) {
-        return switch (value) {
-            case '\'' -> "'\\''";
-            case '\\' -> "'\\\\'";
-            case '\n' -> "'\\n'";
-            case '\r' -> "'\\r'";
-            case '\t' -> "'\\t'";
-            default -> (value >= 32 && value < 127)
-                    ? "'" + value + "'"
-                    : String.format("'\\u%04x'", (int) value);
-        };
     }
 
     static List<AnnotationMirror> nestedAnnotations(AnnotationMirror mirror, Elements elements, String member) {

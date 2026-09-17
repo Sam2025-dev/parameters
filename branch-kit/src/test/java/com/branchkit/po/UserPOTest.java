@@ -52,28 +52,28 @@ class UserPOTest {
     void parametersAssemblesPrimitiveAndCustomProperties() {
         UserPO user = new UserPO();
         assertNull(user.getUserName());
-        assertTrue(user.isBoolean_true());
-        assertEquals((byte) 1, user.getByte_1());
-        assertEquals((short) 2, user.getShort_2());
-        assertEquals(1, user.getInt_1());
-        assertEquals(2, user.getInt_2());
-        assertEquals(3, user.getInt_3());
-        assertEquals(18L, user.getLong_18());
-        assertEquals('U', user.getChar_U());
-        assertEquals(1.5f, user.getFloat_1_5());
-        assertEquals(2.25, user.getDouble_2_25());
+        assertFalse(user.isActive());
+        assertEquals((byte) 0, user.getLevel());
+        assertEquals((short) 0, user.getRank());
+        assertEquals(0, user.getCountryCode());
+        assertEquals(0, user.getCityCode());
+        assertEquals(0, user.getAreaCode());
+        assertEquals(0L, user.getAge());
+        assertEquals('\0', user.getGrade());
+        assertEquals(0f, user.getScore());
+        assertEquals(0d, user.getAmount());
         assertNull(user.getHomeAddress());
 
         Address home = new Address("Shanghai", "Nanjing Road");
         user.setUserName("alice");
         user.setHomeAddress(home);
-        user.setBoolean_true(false);
-        user.setInt_1(10);
+        user.setActive(true);
+        user.setCountryCode(86);
 
         assertEquals("alice", user.getUserName());
         assertEquals(home, user.getHomeAddress());
-        assertFalse(user.isBoolean_true());
-        assertEquals(10, user.getInt_1());
+        assertTrue(user.isActive());
+        assertEquals(86, user.getCountryCode());
     }
 
     @Test
@@ -88,8 +88,8 @@ class UserPOTest {
 
         assertEquals(Long.class, generated.getDeclaredField("id").getType());
         assertEquals(Address.class, generated.getDeclaredField("homeAddress").getType());
-        assertEquals(boolean.class, generated.getDeclaredField("boolean_true").getType());
-        assertEquals(long.class, generated.getDeclaredField("long_18").getType());
+        assertEquals(boolean.class, generated.getDeclaredField("active").getType());
+        assertEquals(long.class, generated.getDeclaredField("age").getType());
     }
 
     @Test

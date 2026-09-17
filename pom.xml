@@ -6,15 +6,14 @@
 
     <groupId>com.pojo</groupId>
     <artifactId>parameters-parent</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>parameters-parent</name>
     <description>Compile-time @Parameters annotation with Lombok-compatible property assembly</description>
 
     <modules>
-        <module>parameters-annotation</module>
-        <module>parameters-processor</module>
+        <module>parameters</module>
         <module>branch-kit</module>
     </modules>
 
@@ -32,12 +31,7 @@
         <dependencies>
             <dependency>
                 <groupId>com.pojo</groupId>
-                <artifactId>parameters-annotation</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.pojo</groupId>
-                <artifactId>parameters-processor</artifactId>
+                <artifactId>parameters</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

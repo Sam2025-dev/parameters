@@ -15,7 +15,7 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 @Parameters(
         String = {"userName"},
-        int_ = {1, 2, 3},
+        int_ = {"countryCode", "cityCode", "areaCode"},
         of = @Of(Class = Address.class, names = {"homeAddress"})
 )
 public class UserVO extends UserVO__Parameters {

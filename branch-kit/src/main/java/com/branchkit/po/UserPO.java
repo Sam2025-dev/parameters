@@ -22,16 +22,16 @@ import java.io.Serializable;
 @EqualsAndHashCode(callSuper = true)
 @Parameters(
         String = {"userName", "name", "address", "phone"},
-        boolean_ = {true},
-        byte_ = {1},
-        short_ = {2},
-        int_ = {1, 2, 3},
-        long_ = {18L},
-        char_ = {'U'},
-        float_ = {1.5f},
-        double_ = {2.25},
+        Long = {"id"},
+        boolean_ = {"active"},
+        byte_ = {"level"},
+        short_ = {"rank"},
+        int_ = {"countryCode", "cityCode", "areaCode"},
+        long_ = {"age"},
+        char_ = {"grade"},
+        float_ = {"score"},
+        double_ = {"amount"},
         of = {
-                @Of(Class = Long.class, names = {"id"}),
                 @Of(Class = Address.class, names = {"homeAddress"})
         }
 )

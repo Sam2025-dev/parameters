@@ -1,52 +1,90 @@
 # parameters
 
-This project is named **parameters**.
+Compile-time `@Parameters` for PO/VO classes. Compatible with Lombok.
 
-It was previously called **branch-kit** and has been renamed throughout the repository.
+Place `@Parameters` on a class and extend the generated `<SimpleName>__Parameters`
+superclass. The processor assembles annotation properties and existing instance
+fields into that superclass with JavaBean accessors, `equals`, `hashCode`, and
+`toString`.
 
-## Java `@Parameters`
+Artifact: `com.pojo:parameters:0.1-SNAPSHOT`
 
-Compile-time property assembly for PO/VO classes. Compatible with Lombok.
+```xml
+<dependency>
+    <groupId>com.pojo</groupId>
+    <artifactId>parameters</artifactId>
+    <version>0.1-SNAPSHOT</version>
+</dependency>
+```
 
-Supports every Java field type: primitives, boxed types, arrays, `String`,
-and custom classes. Instance fields already declared on the annotated type are
-merged into the generated `<Type>__Parameters` superclass together with
-the annotation properties.
+Register it as an annotation processor next to Lombok:
 
-`int_` and `long_` are primitive Java properties (initialized fields such as
-`int_1` and `long_18`). `of` declares a class plus `String[] names` for that class.
+```xml
+<annotationProcessorPaths>
+    <path>
+        <groupId>com.pojo</groupId>
+        <artifactId>parameters</artifactId>
+        <version>0.1-SNAPSHOT</version>
+    </path>
+    <path>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <version>${lombok.version}</version>
+    </path>
+</annotationProcessorPaths>
+```
+
+## Members
+
+Every member takes property **names**. Primitive members use a trailing `_`
+because `int` and `boolean` are Java keywords.
+
+| Member | Generated type |
+| --- | --- |
+| `String` | `String` |
+| `Boolean` `Byte` `Short` `Integer` `Long` `Character` `Float` `Double` | boxed types |
+| `boolean_` `byte_` `short_` `int_` `long_` `char_` `float_` `double_` | primitives |
+| `of` | any Java class, via `@Of(Class, names)` |
+
+When `@Of` omits `names`, the field is the decapitalized simple class name
+(`Address` → `address`). Types whose simple name is not a valid identifier
+(for example `Long` → `long`) must declare `names`.
+
+## Example
 
 ```java
 import com.pojo.parameters.Parameters;
 import com.pojo.parameters.Parameters.Of;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 @Data
+@ToString(callSuper = true)
+@EqualsAndHashCode(callSuper = true)
 @Parameters(
     String = {"userName"},
-    int_ = {1, 2, 3},
-    long_ = {18L},
+    Boolean = {"enabledFlag"},
+    Integer = {"id"},
+    Long = {"userId"},
+    int_ = {"countryCode", "cityCode", "areaCode"},
     of = {
         @Of(Class = Address.class, names = {"homeAddress"}),
-        @Of(Class = Long.class, names = {"id"}),
         @Of(Class = String[].class, names = {"tags"})
     }
 )
 public class UserVO extends UserVO__Parameters {
-    private String extra; // also merged into UserVO__Parameters
+    private String extra;
 }
 ```
 
-The processor generates `UserVO__Parameters` with JavaBean accessors (and
-`equals` / `hashCode` / `toString`) for every assembled property.
+This generates `UserVO__Parameters` with:
 
-Lombok annotations on the subclass keep working. Put
-`@EqualsAndHashCode(callSuper = true)` and `@ToString(callSuper = true)` on the
-subclass if Lombok should include the assembled properties.
+- `String userName`, `Boolean enabledFlag`, `Integer id`, `Long userId`
+- `int countryCode`, `int cityCode`, `int areaCode`
+- `Address homeAddress`, `String[] tags`
+- `String extra` (merged from the subclass)
 
-## Usage
-
-```js
-const { name } = require('parameters');
-console.log(name); // "parameters"
-```
+Lombok annotations on the subclass keep working. Use
+`@EqualsAndHashCode(callSuper = true)` and `@ToString(callSuper = true)` if
+Lombok should include the assembled properties.

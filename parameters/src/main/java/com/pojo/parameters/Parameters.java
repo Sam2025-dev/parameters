@@ -6,117 +6,54 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/**
- * Compile-time property assembly for PO/VO types, in the same spirit as Lombok.
- *
- * <p>Place this on a class and extend the generated {@code <SimpleName>__Parameters}
- * superclass. The processor creates that superclass with:
- * <ul>
- *   <li>every instance field already declared on the annotated class (merged in)</li>
- *   <li>properties declared on this annotation: primitives, {@code String},
- *       arrays, boxed types, and custom classes</li>
- * </ul>
- *
- * <pre>{@code
- * @Parameters(
- *     String = {"userName"},
- *     int_ = {1, 2, 3},
- *     long_ = {18L},
- *     of = {
- *         @Of(Class = Address.class, names = {"homeAddress"}),
- *         @Of(Class = Long.class, names = {"id"})
- *     }
- * )
- * @Data
- * public class UserVO extends UserVO__Parameters {
- *     private String extra;
- * }
- * }</pre>
- *
- * <p>Shorthands such as {@code int_ = {1, 2, 3}} and {@code long_ = {18L}}
- * generate initialized primitive fields ({@code int_1 = 1}, {@code long_18 = 18L}).
- * {@code of} declares a Java class plus {@code String[]} names for that class.
- * When {@code names} is omitted, the field is the decapitalized simple class name
- * ({@code Address} → {@code address}).
- *
- * <p>Compatible with Lombok annotations such as {@code @Data}, {@code @Getter},
- * {@code @Setter}, {@code @Builder}, {@code @ToString}, and
- * {@code @EqualsAndHashCode}. Assembled properties live on the generated
- * superclass so the two processors do not emit duplicate members.
- */
 @Documented
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.SOURCE)
 public @interface Parameters {
 
-    /**
-     * Names of {@code String} properties. Written as
-     * {@code @Parameters(String = {"userName"})}.
-     */
     String[] String() default {};
 
-    boolean[] boolean_() default {};
+    String[] Boolean() default {};
 
-    byte[] byte_() default {};
+    String[] Byte() default {};
 
-    short[] short_() default {};
+    String[] Short() default {};
 
-    /**
-     * Initial values of assembled {@code int} properties. Each value {@code n}
-     * becomes a field named {@code int_n} initialized to {@code n}.
-     */
-    int[] int_() default {};
+    String[] Integer() default {};
 
-    /**
-     * Initial values of assembled {@code long} properties. Each value {@code n}
-     * becomes a field named {@code long_n} initialized to {@code n}L.
-     */
-    long[] long_() default {};
+    String[] Long() default {};
 
-    char[] char_() default {};
+    String[] Character() default {};
 
-    float[] float_() default {};
+    String[] Float() default {};
 
-    double[] double_() default {};
+    String[] Double() default {};
 
-    /**
-     * Properties of any Java class. Each {@link Of} names a class and the
-     * {@code String[]} field names of that class.
-     */
+    String[] boolean_() default {};
+
+    String[] byte_() default {};
+
+    String[] short_() default {};
+
+    String[] int_() default {};
+
+    String[] long_() default {};
+
+    String[] char_() default {};
+
+    String[] float_() default {};
+
+    String[] double_() default {};
+
     Of[] of() default {};
 
-    /**
-     * One or more assembled properties of the same Java class.
-     *
-     * <p>{@code class} is a Java keyword, so the type member is named {@code Class},
-     * matching {@link #String()}. {@code names} is the property identifiers.
-     *
-     * <pre>{@code
-     * @Of(Class = Address.class, names = {"homeAddress", "workAddress"})
-     * @Of(Class = Long.class, names = {"id"})
-     * @Of(Class = String[].class, names = {"tags"})
-     * @Of(Class = Address.class)
-     * }</pre>
-     *
-     * <p>When {@code names} is omitted, one field is generated from the decapitalized
-     * simple class name ({@code Address} → {@code address}). Types whose simple name
-     * is not a valid identifier (for example {@code Long} → {@code long}) must declare
-     * {@code names} explicitly.
-     */
     @Documented
     @Target({})
     @Retention(RetentionPolicy.SOURCE)
     public @interface Of {
 
-        /**
-         * Java class of each assembled property. Written as {@code Class = Address.class}.
-         */
         Class<?> Class();
 
-        /**
-         * Property names of this class. Empty means one field named from the simple
-         * class name.
-         */
         String[] names() default {};
     }
 }
