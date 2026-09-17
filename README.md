@@ -1,6 +1,6 @@
 # parameters
 
-Compile-time `@Parameters` for PO/VO classes. Compatible with Lombok.
+Compile-time `@Parameters` for PO/VO classes. Compatible with Lombok and Java 8.
 
 Place `@Parameters` on a class and extend the generated `<SimpleName>__Parameters`
 superclass. The processor assembles annotation properties and existing instance

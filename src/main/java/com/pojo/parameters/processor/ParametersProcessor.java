@@ -26,7 +26,7 @@ import java.util.Set;
  * Assembles {@link Parameters} fields into a generated superclass at compile time.
  */
 @SupportedAnnotationTypes("com.pojo.parameters.Parameters")
-@SupportedSourceVersion(SourceVersion.RELEASE_21)
+@SupportedSourceVersion(SourceVersion.RELEASE_8)
 public final class ParametersProcessor extends AbstractProcessor {
 
     static final String SUPERCLASS_SUFFIX = "__Parameters";
