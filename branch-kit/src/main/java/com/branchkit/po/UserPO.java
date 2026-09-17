@@ -1,6 +1,6 @@
 package com.branchkit.po;
 
-import com.pojo.parameters.Parameter;
+import com.pojo.parameters.Of;
 import com.pojo.parameters.Parameters;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -30,9 +30,9 @@ import java.io.Serializable;
         char_ = {'U'},
         float_ = {1.5f},
         double_ = {2.25},
-        value = {
-                @Parameter(name = "id", type = Long.class),
-                @Parameter(name = "homeAddress", type = Address.class)
+        of = {
+                @Of(Class = Long.class, names = {"id"}),
+                @Of(Class = Address.class, names = {"homeAddress"})
         }
 )
 public class UserPO extends UserPO__Parameters implements Serializable {

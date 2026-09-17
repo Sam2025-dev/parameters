@@ -21,9 +21,11 @@ import java.lang.annotation.Target;
  * @Parameters(
  *     String = {"userName"},
  *     int_ = {1, 2, 3},
- *     boolean_ = {true},
- *     type = Address.class,
- *     value = @Parameter(name = "id", type = Long.class)
+ *     long_ = {18L},
+ *     of = {
+ *         @Of(Class = Address.class, names = {"homeAddress"}),
+ *         @Of(Class = Long.class, names = {"id"})
+ *     }
  * )
  * @Data
  * public class UserVO extends UserVO__Parameters {
@@ -31,11 +33,11 @@ import java.lang.annotation.Target;
  * }
  * }</pre>
  *
- * <p>Shorthands such as {@code int_ = {1, 2, 3}} generate initialized primitive
- * fields ({@code int_1 = 1}, …). {@code type = Address.class} names the field
- * from the decapitalized simple name ({@code address}). Use {@link Parameter}
- * when you need an explicit name or a type whose simple name is not a valid
- * identifier (for example {@code Long} → {@code long}).
+ * <p>Shorthands such as {@code int_ = {1, 2, 3}} and {@code long_ = {18L}}
+ * generate initialized primitive fields ({@code int_1 = 1}, {@code long_18 = 18L}).
+ * {@code of} declares a Java class plus {@code String[]} names for that class.
+ * When {@code names} is omitted, the field is the decapitalized simple class name
+ * ({@code Address} → {@code address}).
  *
  * <p>Compatible with Lombok annotations such as {@code @Data}, {@code @Getter},
  * {@code @Setter}, {@code @Builder}, {@code @ToString}, and
@@ -48,10 +50,10 @@ import java.lang.annotation.Target;
 public @interface Parameters {
 
     /**
-     * Explicitly typed properties of any kind, including primitives, boxed
-     * types, arrays, and custom classes.
+     * Properties of any Java class. Each {@link Of} names a class and the
+     * {@code String[]} field names of that class.
      */
-    Parameter[] value() default {};
+    Of[] of() default {};
 
     /**
      * Names of {@code String} properties. Written as
@@ -71,6 +73,10 @@ public @interface Parameters {
      */
     int[] int_() default {};
 
+    /**
+     * Initial values of assembled {@code long} properties. Each value {@code n}
+     * becomes a field named {@code long_n} initialized to {@code n}L.
+     */
     long[] long_() default {};
 
     char[] char_() default {};
@@ -78,10 +84,4 @@ public @interface Parameters {
     float[] float_() default {};
 
     double[] double_() default {};
-
-    /**
-     * Additional types to assemble. The field name is the decapitalized simple
-     * name of each class ({@code Address} → {@code address}).
-     */
-    Class<?>[] type() default {};
 }

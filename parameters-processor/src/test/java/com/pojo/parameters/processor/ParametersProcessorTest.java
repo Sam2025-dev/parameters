@@ -74,7 +74,7 @@ class ParametersProcessorTest {
                 """
                         package com.example;
 
-                        import com.pojo.parameters.Parameter;
+                        import com.pojo.parameters.Of;
                         import com.pojo.parameters.Parameters;
 
                         @Parameters(
@@ -87,11 +87,11 @@ class ParametersProcessorTest {
                                 char_ = {'Z'},
                                 float_ = {1.5f},
                                 double_ = {2.25},
-                                type = Address.class,
-                                value = {
-                                        @Parameter(name = "id", type = Long.class),
-                                        @Parameter(name = "tags", type = String[].class),
-                                        @Parameter(name = "count", type = int.class)
+                                of = {
+                                        @Of(Class = Address.class),
+                                        @Of(Class = Long.class, names = {"id"}),
+                                        @Of(Class = String[].class, names = {"tags"}),
+                                        @Of(Class = int.class, names = {"count"})
                                 }
                         )
                         public class AllTypesVO extends AllTypesVO__Parameters {
@@ -271,10 +271,10 @@ class ParametersProcessorTest {
                 """
                         package com.example;
 
-                        import com.pojo.parameters.Parameter;
+                        import com.pojo.parameters.Of;
                         import com.pojo.parameters.Parameters;
 
-                        @Parameters(value = @Parameter(name = "id", type = Integer.class))
+                        @Parameters(of = @Of(Class = Integer.class, names = {"id"}))
                         public class ConflictVO extends ConflictVO__Parameters {
                             private Long id;
                         }
@@ -283,6 +283,132 @@ class ParametersProcessorTest {
         Compilation compilation = compile(source);
         assertThat(compilation).failed();
         assertThat(compilation).hadErrorContaining("Duplicate property name with conflicting types: id");
+    }
+
+    @Test
+    void ofDeclaresClassAndMultipleNames() {
+        JavaFileObject address = JavaFileObjects.forSourceString(
+                "com.example.Address",
+                """
+                        package com.example;
+
+                        public class Address {
+                            public String city;
+                        }
+                        """);
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.OfVO",
+                """
+                        package com.example;
+
+                        import com.pojo.parameters.Of;
+                        import com.pojo.parameters.Parameters;
+
+                        @Parameters(
+                                int_ = {1},
+                                long_ = {18L},
+                                of = @Of(Class = Address.class, names = {"homeAddress", "workAddress"})
+                        )
+                        public class OfVO extends OfVO__Parameters {
+                        }
+                        """);
+
+        Compilation compilation = compile(address, source);
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("com.example.OfVO__Parameters")
+                .contentsAsUtf8String()
+                .contains("private int int_1 = 1;");
+        assertThat(compilation)
+                .generatedSourceFile("com.example.OfVO__Parameters")
+                .contentsAsUtf8String()
+                .contains("private long long_18 = 18L;");
+        assertThat(compilation)
+                .generatedSourceFile("com.example.OfVO__Parameters")
+                .contentsAsUtf8String()
+                .contains("private com.example.Address homeAddress;");
+        assertThat(compilation)
+                .generatedSourceFile("com.example.OfVO__Parameters")
+                .contentsAsUtf8String()
+                .contains("private com.example.Address workAddress;");
+        assertThat(compilation)
+                .generatedSourceFile("com.example.OfVO__Parameters")
+                .contentsAsUtf8String()
+                .contains("public com.example.Address getHomeAddress()");
+        assertThat(compilation)
+                .generatedSourceFile("com.example.OfVO__Parameters")
+                .contentsAsUtf8String()
+                .contains("public void setWorkAddress(com.example.Address workAddress)");
+    }
+
+    @Test
+    void ofWithoutNamesUsesDecapitalizedClassName() {
+        JavaFileObject address = JavaFileObjects.forSourceString(
+                "com.example.Address",
+                """
+                        package com.example;
+
+                        public class Address {}
+                        """);
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.DerivedNameVO",
+                """
+                        package com.example;
+
+                        import com.pojo.parameters.Of;
+                        import com.pojo.parameters.Parameters;
+
+                        @Parameters(of = @Of(Class = Address.class))
+                        public class DerivedNameVO extends DerivedNameVO__Parameters {
+                        }
+                        """);
+
+        Compilation compilation = compile(address, source);
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("com.example.DerivedNameVO__Parameters")
+                .contentsAsUtf8String()
+                .contains("private com.example.Address address;");
+    }
+
+    @Test
+    void ofRequiresNamesWhenClassSimpleNameIsNotAnIdentifier() {
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.BadOfVO",
+                """
+                        package com.example;
+
+                        import com.pojo.parameters.Of;
+                        import com.pojo.parameters.Parameters;
+
+                        @Parameters(of = @Of(Class = Long.class))
+                        public class BadOfVO extends BadOfVO__Parameters {
+                        }
+                        """);
+
+        Compilation compilation = compile(source);
+        assertThat(compilation).failed();
+        assertThat(compilation).hadErrorContaining("declare names explicitly on @Of");
+    }
+
+    @Test
+    void rejectsInvalidOfPropertyName() {
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.BadNameVO",
+                """
+                        package com.example;
+
+                        import com.pojo.parameters.Of;
+                        import com.pojo.parameters.Parameters;
+
+                        @Parameters(of = @Of(Class = Long.class, names = {"123id"}))
+                        public class BadNameVO extends BadNameVO__Parameters {
+                        }
+                        """);
+
+        Compilation compilation = compile(source);
+        assertThat(compilation).failed();
+        assertThat(compilation).hadErrorContaining("Invalid @Of property name");
     }
 
     private static Compilation compile(JavaFileObject... sources) {
