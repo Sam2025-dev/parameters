@@ -74,7 +74,6 @@ import lombok.ToString;
     }
 )
 public class UserVO extends UserVO__Parameters {
-    private String extra;
 }
 ```
 
@@ -83,7 +82,6 @@ This generates `UserVO__Parameters` with:
 - `String userName`, `Boolean enabledFlag`, `Integer id`, `Long userId`
 - `int countryCode`, `int cityCode`, `int areaCode`
 - `Address homeAddress`, `String[] tags`
-- `String extra` (merged from the subclass)
 
 Lombok annotations on the subclass keep working. Use
 `@EqualsAndHashCode(callSuper = true)` and `@ToString(callSuper = true)` if
