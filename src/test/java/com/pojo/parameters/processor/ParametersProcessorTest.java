@@ -15,15 +15,14 @@ class ParametersProcessorTest {
     void generatesSuperclassWithStringAndIntProperties() {
         JavaFileObject source = JavaFileObjects.forSourceString(
                 "com.example.DemoVO",
-                """
-                        package com.example;
-
-                        import com.pojo.parameters.Parameters;
-
-                        @Parameters(String = {"userName"}, int_ = {"countryCode", "cityCode", "areaCode"})
-                        public class DemoVO extends DemoVO__Parameters {
-                        }
-                        """);
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "",
+                        "@Parameters(String = {\"userName\"}, int_ = {\"countryCode\", \"cityCode\", \"areaCode\"})",
+                        "public class DemoVO extends DemoVO__Parameters {",
+                        "}"));
 
         Compilation compilation = compile(source);
 
@@ -62,51 +61,51 @@ class ParametersProcessorTest {
     void generatesAllPrimitiveShorthandsAndCustomTypes() {
         JavaFileObject address = JavaFileObjects.forSourceString(
                 "com.example.Address",
-                """
-                        package com.example;
-
-                        public class Address {
-                            public String city;
-                        }
-                        """);
+                src(
+                        "package com.example;",
+                        "",
+                        "public class Address {",
+                        "    public String city;",
+                        "}"));
         JavaFileObject source = JavaFileObjects.forSourceString(
                 "com.example.AllTypesVO",
-                """
-                        package com.example;
-
-                        import com.pojo.parameters.Parameters;
-                        import com.pojo.parameters.Parameters.Of;
-
-                        @Parameters(
-                                String = {"userName"},
-                                Boolean = {"enabledFlag"},
-                                Byte = {"levelBox"},
-                                Short = {"rankBox"},
-                                Integer = {"countBox"},
-                                Long = {"id"},
-                                Character = {"gradeBox"},
-                                Float = {"scoreBox"},
-                                Double = {"amountBox"},
-                                boolean_ = {"enabled"},
-                                byte_ = {"level"},
-                                short_ = {"rank"},
-                                int_ = {"count"},
-                                long_ = {"age"},
-                                char_ = {"grade"},
-                                float_ = {"score"},
-                                double_ = {"amount"},
-                                of = {
-                                        @Of(Class = Address.class),
-                                        @Of(Class = String[].class, names = {"tags"})
-                                }
-                        )
-                        public class AllTypesVO extends AllTypesVO__Parameters {
-                        }
-                        """);
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
+                        "",
+                        "@Parameters(",
+                        "        String = {\"userName\"},",
+                        "        Boolean = {\"enabledFlag\"},",
+                        "        Byte = {\"levelBox\"},",
+                        "        Short = {\"rankBox\"},",
+                        "        Integer = {\"countBox\"},",
+                        "        Long = {\"id\"},",
+                        "        Character = {\"gradeBox\"},",
+                        "        Float = {\"scoreBox\"},",
+                        "        Double = {\"amountBox\"},",
+                        "        boolean_ = {\"enabled\"},",
+                        "        byte_ = {\"level\"},",
+                        "        short_ = {\"rank\"},",
+                        "        int_ = {\"count\"},",
+                        "        long_ = {\"age\"},",
+                        "        char_ = {\"grade\"},",
+                        "        float_ = {\"score\"},",
+                        "        double_ = {\"amount\"},",
+                        "        of = {",
+                        "                @Of(Class = Address.class),",
+                        "                @Of(Class = String[].class, names = {\"tags\"})",
+                        "        }",
+                        ")",
+                        "public class AllTypesVO extends AllTypesVO__Parameters {",
+                        "}"));
 
         Compilation compilation = compile(address, source);
         assertThat(compilation).succeeded();
-        var generated = assertThat(compilation).generatedSourceFile("com.example.AllTypesVO__Parameters").contentsAsUtf8String();
+        com.google.common.truth.StringSubject generated = assertThat(compilation)
+                .generatedSourceFile("com.example.AllTypesVO__Parameters")
+                .contentsAsUtf8String();
         generated.contains("private String userName;");
         generated.contains("private Boolean enabledFlag;");
         generated.contains("private Byte levelBox;");
@@ -134,17 +133,16 @@ class ParametersProcessorTest {
     void mergesInstanceFieldsIntoGeneratedParameters() {
         JavaFileObject source = JavaFileObjects.forSourceString(
                 "com.example.MergeVO",
-                """
-                        package com.example;
-
-                        import com.pojo.parameters.Parameters;
-
-                        @Parameters(String = {"userName"})
-                        public class MergeVO extends MergeVO__Parameters {
-                            private Long id;
-                            private String label;
-                        }
-                        """);
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "",
+                        "@Parameters(String = {\"userName\"})",
+                        "public class MergeVO extends MergeVO__Parameters {",
+                        "    private Long id;",
+                        "    private String label;",
+                        "}"));
 
         Compilation compilation = compile(source);
         assertThat(compilation).succeeded();
@@ -166,16 +164,15 @@ class ParametersProcessorTest {
     void emptyAnnotationStillMergesExistingFields() {
         JavaFileObject source = JavaFileObjects.forSourceString(
                 "com.example.OnlyFieldsVO",
-                """
-                        package com.example;
-
-                        import com.pojo.parameters.Parameters;
-
-                        @Parameters
-                        public class OnlyFieldsVO extends OnlyFieldsVO__Parameters {
-                            private String title;
-                        }
-                        """);
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "",
+                        "@Parameters",
+                        "public class OnlyFieldsVO extends OnlyFieldsVO__Parameters {",
+                        "    private String title;",
+                        "}"));
 
         Compilation compilation = compile(source);
         assertThat(compilation).succeeded();
@@ -189,15 +186,14 @@ class ParametersProcessorTest {
     void rejectsEmptyParameters() {
         JavaFileObject source = JavaFileObjects.forSourceString(
                 "com.example.EmptyVO",
-                """
-                        package com.example;
-
-                        import com.pojo.parameters.Parameters;
-
-                        @Parameters
-                        public class EmptyVO extends EmptyVO__Parameters {
-                        }
-                        """);
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "",
+                        "@Parameters",
+                        "public class EmptyVO extends EmptyVO__Parameters {",
+                        "}"));
 
         Compilation compilation = compile(source);
 
@@ -209,15 +205,14 @@ class ParametersProcessorTest {
     void rejectsInvalidPropertyName() {
         JavaFileObject source = JavaFileObjects.forSourceString(
                 "com.example.BadVO",
-                """
-                        package com.example;
-
-                        import com.pojo.parameters.Parameters;
-
-                        @Parameters(String = {"123oops"})
-                        public class BadVO extends BadVO__Parameters {
-                        }
-                        """);
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "",
+                        "@Parameters(String = {\"123oops\"})",
+                        "public class BadVO extends BadVO__Parameters {",
+                        "}"));
 
         Compilation compilation = compile(source);
 
@@ -229,15 +224,14 @@ class ParametersProcessorTest {
     void rejectsInvalidIntPropertyName() {
         JavaFileObject source = JavaFileObjects.forSourceString(
                 "com.example.BadIntVO",
-                """
-                        package com.example;
-
-                        import com.pojo.parameters.Parameters;
-
-                        @Parameters(int_ = {"123oops"})
-                        public class BadIntVO extends BadIntVO__Parameters {
-                        }
-                        """);
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "",
+                        "@Parameters(int_ = {\"123oops\"})",
+                        "public class BadIntVO extends BadIntVO__Parameters {",
+                        "}"));
 
         Compilation compilation = compile(source);
 
@@ -249,16 +243,15 @@ class ParametersProcessorTest {
     void mergesSameNameSameTypeInsteadOfFailing() {
         JavaFileObject source = JavaFileObjects.forSourceString(
                 "com.example.DupVO",
-                """
-                        package com.example;
-
-                        import com.pojo.parameters.Parameters;
-
-                        @Parameters(String = {"userName"})
-                        public class DupVO extends DupVO__Parameters {
-                            private String userName;
-                        }
-                        """);
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "",
+                        "@Parameters(String = {\"userName\"})",
+                        "public class DupVO extends DupVO__Parameters {",
+                        "    private String userName;",
+                        "}"));
 
         Compilation compilation = compile(source);
 
@@ -273,17 +266,16 @@ class ParametersProcessorTest {
     void rejectsConflictingTypesForTheSameName() {
         JavaFileObject source = JavaFileObjects.forSourceString(
                 "com.example.ConflictVO",
-                """
-                        package com.example;
-
-                        import com.pojo.parameters.Parameters;
-                        import com.pojo.parameters.Parameters.Of;
-
-                        @Parameters(of = @Of(Class = Integer.class, names = {"id"}))
-                        public class ConflictVO extends ConflictVO__Parameters {
-                            private Long id;
-                        }
-                        """);
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
+                        "",
+                        "@Parameters(of = @Of(Class = Integer.class, names = {\"id\"}))",
+                        "public class ConflictVO extends ConflictVO__Parameters {",
+                        "    private Long id;",
+                        "}"));
 
         Compilation compilation = compile(source);
         assertThat(compilation).failed();
@@ -294,29 +286,27 @@ class ParametersProcessorTest {
     void ofDeclaresClassAndMultipleNames() {
         JavaFileObject address = JavaFileObjects.forSourceString(
                 "com.example.Address",
-                """
-                        package com.example;
-
-                        public class Address {
-                            public String city;
-                        }
-                        """);
+                src(
+                        "package com.example;",
+                        "",
+                        "public class Address {",
+                        "    public String city;",
+                        "}"));
         JavaFileObject source = JavaFileObjects.forSourceString(
                 "com.example.OfVO",
-                """
-                        package com.example;
-
-                        import com.pojo.parameters.Parameters;
-                        import com.pojo.parameters.Parameters.Of;
-
-                        @Parameters(
-                                int_ = {"countryCode"},
-                                long_ = {"age"},
-                                of = @Of(Class = Address.class, names = {"homeAddress", "workAddress"})
-                        )
-                        public class OfVO extends OfVO__Parameters {
-                        }
-                        """);
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
+                        "",
+                        "@Parameters(",
+                        "        int_ = {\"countryCode\"},",
+                        "        long_ = {\"age\"},",
+                        "        of = @Of(Class = Address.class, names = {\"homeAddress\", \"workAddress\"})",
+                        ")",
+                        "public class OfVO extends OfVO__Parameters {",
+                        "}"));
 
         Compilation compilation = compile(address, source);
         assertThat(compilation).succeeded();
@@ -350,23 +340,21 @@ class ParametersProcessorTest {
     void ofWithoutNamesUsesDecapitalizedClassName() {
         JavaFileObject address = JavaFileObjects.forSourceString(
                 "com.example.Address",
-                """
-                        package com.example;
-
-                        public class Address {}
-                        """);
+                src(
+                        "package com.example;",
+                        "",
+                        "public class Address {}"));
         JavaFileObject source = JavaFileObjects.forSourceString(
                 "com.example.DerivedNameVO",
-                """
-                        package com.example;
-
-                        import com.pojo.parameters.Parameters;
-                        import com.pojo.parameters.Parameters.Of;
-
-                        @Parameters(of = @Of(Class = Address.class))
-                        public class DerivedNameVO extends DerivedNameVO__Parameters {
-                        }
-                        """);
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
+                        "",
+                        "@Parameters(of = @Of(Class = Address.class))",
+                        "public class DerivedNameVO extends DerivedNameVO__Parameters {",
+                        "}"));
 
         Compilation compilation = compile(address, source);
         assertThat(compilation).succeeded();
@@ -380,16 +368,15 @@ class ParametersProcessorTest {
     void ofRequiresNamesWhenClassSimpleNameIsNotAnIdentifier() {
         JavaFileObject source = JavaFileObjects.forSourceString(
                 "com.example.BadOfVO",
-                """
-                        package com.example;
-
-                        import com.pojo.parameters.Parameters;
-                        import com.pojo.parameters.Parameters.Of;
-
-                        @Parameters(of = @Of(Class = Long.class))
-                        public class BadOfVO extends BadOfVO__Parameters {
-                        }
-                        """);
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
+                        "",
+                        "@Parameters(of = @Of(Class = Long.class))",
+                        "public class BadOfVO extends BadOfVO__Parameters {",
+                        "}"));
 
         Compilation compilation = compile(source);
         assertThat(compilation).failed();
@@ -400,16 +387,15 @@ class ParametersProcessorTest {
     void rejectsInvalidOfPropertyName() {
         JavaFileObject source = JavaFileObjects.forSourceString(
                 "com.example.BadNameVO",
-                """
-                        package com.example;
-
-                        import com.pojo.parameters.Parameters;
-                        import com.pojo.parameters.Parameters.Of;
-
-                        @Parameters(of = @Of(Class = Long.class, names = {"123id"}))
-                        public class BadNameVO extends BadNameVO__Parameters {
-                        }
-                        """);
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
+                        "",
+                        "@Parameters(of = @Of(Class = Long.class, names = {\"123id\"}))",
+                        "public class BadNameVO extends BadNameVO__Parameters {",
+                        "}"));
 
         Compilation compilation = compile(source);
         assertThat(compilation).failed();
@@ -420,5 +406,16 @@ class ParametersProcessorTest {
         return javac()
                 .withProcessors(new ParametersProcessor())
                 .compile(sources);
+    }
+
+    private static String src(String... lines) {
+        StringBuilder text = new StringBuilder();
+        for (int i = 0; i < lines.length; i++) {
+            if (i > 0) {
+                text.append('\n');
+            }
+            text.append(lines[i]);
+        }
+        return text.toString();
     }
 }
