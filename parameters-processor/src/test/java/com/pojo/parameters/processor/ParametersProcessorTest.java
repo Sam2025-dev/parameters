@@ -105,6 +105,35 @@ class ParametersProcessorTest {
     }
 
     @Test
+    void disambiguatesDuplicateIntValues() {
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.DupIntVO",
+                """
+                        package com.example;
+
+                        import com.pojo.parameters.Parameters;
+
+                        @Parameters(int_ = {1, 1})
+                        public class DupIntVO extends DupIntVO__Parameters {
+                        }
+                        """);
+
+        Compilation compilation = javac()
+                .withProcessors(new ParametersProcessor())
+                .compile(source);
+
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("com.example.DupIntVO__Parameters")
+                .contentsAsUtf8String()
+                .contains("private int int_1 = 1;");
+        assertThat(compilation)
+                .generatedSourceFile("com.example.DupIntVO__Parameters")
+                .contentsAsUtf8String()
+                .contains("private int int_1_2 = 1;");
+    }
+
+    @Test
     void rejectsDuplicatePropertyName() {
         JavaFileObject source = JavaFileObjects.forSourceString(
                 "com.example.DupVO",
