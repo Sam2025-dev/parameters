@@ -25,9 +25,7 @@ class ParametersProcessorTest {
                         }
                         """);
 
-        Compilation compilation = javac()
-                .withProcessors(new ParametersProcessor())
-                .compile(source);
+        Compilation compilation = compile(source);
 
         assertThat(compilation).succeeded();
         assertThat(compilation)
@@ -61,6 +59,121 @@ class ParametersProcessorTest {
     }
 
     @Test
+    void generatesAllPrimitiveShorthandsAndCustomTypes() {
+        JavaFileObject address = JavaFileObjects.forSourceString(
+                "com.example.Address",
+                """
+                        package com.example;
+
+                        public class Address {
+                            public String city;
+                        }
+                        """);
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.AllTypesVO",
+                """
+                        package com.example;
+
+                        import com.pojo.parameters.Parameter;
+                        import com.pojo.parameters.Parameters;
+
+                        @Parameters(
+                                String = {"userName"},
+                                boolean_ = {true},
+                                byte_ = {1},
+                                short_ = {2},
+                                int_ = {3},
+                                long_ = {4L},
+                                char_ = {'Z'},
+                                float_ = {1.5f},
+                                double_ = {2.25},
+                                type = Address.class,
+                                value = {
+                                        @Parameter(name = "id", type = Long.class),
+                                        @Parameter(name = "tags", type = String[].class),
+                                        @Parameter(name = "count", type = int.class)
+                                }
+                        )
+                        public class AllTypesVO extends AllTypesVO__Parameters {
+                        }
+                        """);
+
+        Compilation compilation = compile(address, source);
+        assertThat(compilation).succeeded();
+        var generated = assertThat(compilation).generatedSourceFile("com.example.AllTypesVO__Parameters").contentsAsUtf8String();
+        generated.contains("private String userName;");
+        generated.contains("private boolean boolean_true = true;");
+        generated.contains("private byte byte_1 = (byte) 1;");
+        generated.contains("private short short_2 = (short) 2;");
+        generated.contains("private int int_3 = 3;");
+        generated.contains("private long long_4 = 4L;");
+        generated.contains("private char char_Z = 'Z';");
+        generated.contains("private float float_1_5 = 1.5f;");
+        generated.contains("private double double_2_25 = 2.25;");
+        generated.contains("private com.example.Address address;");
+        generated.contains("private Long id;");
+        generated.contains("private String[] tags;");
+        generated.contains("private int count;");
+        generated.contains("public boolean isBoolean_true()");
+        generated.contains("public com.example.Address getAddress()");
+    }
+
+    @Test
+    void mergesInstanceFieldsIntoGeneratedParameters() {
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.MergeVO",
+                """
+                        package com.example;
+
+                        import com.pojo.parameters.Parameters;
+
+                        @Parameters(String = {"userName"})
+                        public class MergeVO extends MergeVO__Parameters {
+                            private Long id;
+                            private String label;
+                        }
+                        """);
+
+        Compilation compilation = compile(source);
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("com.example.MergeVO__Parameters")
+                .contentsAsUtf8String()
+                .contains("private Long id;");
+        assertThat(compilation)
+                .generatedSourceFile("com.example.MergeVO__Parameters")
+                .contentsAsUtf8String()
+                .contains("private String label;");
+        assertThat(compilation)
+                .generatedSourceFile("com.example.MergeVO__Parameters")
+                .contentsAsUtf8String()
+                .contains("private String userName;");
+    }
+
+    @Test
+    void emptyAnnotationStillMergesExistingFields() {
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.OnlyFieldsVO",
+                """
+                        package com.example;
+
+                        import com.pojo.parameters.Parameters;
+
+                        @Parameters
+                        public class OnlyFieldsVO extends OnlyFieldsVO__Parameters {
+                            private String title;
+                        }
+                        """);
+
+        Compilation compilation = compile(source);
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("com.example.OnlyFieldsVO__Parameters")
+                .contentsAsUtf8String()
+                .contains("private String title;");
+    }
+
+    @Test
     void rejectsEmptyParameters() {
         JavaFileObject source = JavaFileObjects.forSourceString(
                 "com.example.EmptyVO",
@@ -74,12 +187,10 @@ class ParametersProcessorTest {
                         }
                         """);
 
-        Compilation compilation = javac()
-                .withProcessors(new ParametersProcessor())
-                .compile(source);
+        Compilation compilation = compile(source);
 
         assertThat(compilation).failed();
-        assertThat(compilation).hadErrorContaining("must declare at least one String or int_ property");
+        assertThat(compilation).hadErrorContaining("must declare at least one property or instance field to merge");
     }
 
     @Test
@@ -96,9 +207,7 @@ class ParametersProcessorTest {
                         }
                         """);
 
-        Compilation compilation = javac()
-                .withProcessors(new ParametersProcessor())
-                .compile(source);
+        Compilation compilation = compile(source);
 
         assertThat(compilation).failed();
         assertThat(compilation).hadErrorContaining("Invalid String property name");
@@ -118,9 +227,7 @@ class ParametersProcessorTest {
                         }
                         """);
 
-        Compilation compilation = javac()
-                .withProcessors(new ParametersProcessor())
-                .compile(source);
+        Compilation compilation = compile(source);
 
         assertThat(compilation).succeeded();
         assertThat(compilation)
@@ -134,7 +241,7 @@ class ParametersProcessorTest {
     }
 
     @Test
-    void rejectsDuplicatePropertyName() {
+    void mergesSameNameSameTypeInsteadOfFailing() {
         JavaFileObject source = JavaFileObjects.forSourceString(
                 "com.example.DupVO",
                 """
@@ -148,11 +255,39 @@ class ParametersProcessorTest {
                         }
                         """);
 
-        Compilation compilation = javac()
-                .withProcessors(new ParametersProcessor())
-                .compile(source);
+        Compilation compilation = compile(source);
 
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("com.example.DupVO__Parameters")
+                .contentsAsUtf8String()
+                .contains("private String userName;");
+    }
+
+    @Test
+    void rejectsConflictingTypesForTheSameName() {
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.ConflictVO",
+                """
+                        package com.example;
+
+                        import com.pojo.parameters.Parameter;
+                        import com.pojo.parameters.Parameters;
+
+                        @Parameters(value = @Parameter(name = "id", type = Integer.class))
+                        public class ConflictVO extends ConflictVO__Parameters {
+                            private Long id;
+                        }
+                        """);
+
+        Compilation compilation = compile(source);
         assertThat(compilation).failed();
-        assertThat(compilation).hadErrorContaining("Duplicate property name: userName");
+        assertThat(compilation).hadErrorContaining("Duplicate property name with conflicting types: id");
+    }
+
+    private static Compilation compile(JavaFileObject... sources) {
+        return javac()
+                .withProcessors(new ParametersProcessor())
+                .compile(sources);
     }
 }

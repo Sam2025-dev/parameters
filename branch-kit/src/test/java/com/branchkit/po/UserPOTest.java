@@ -8,6 +8,7 @@ import java.lang.reflect.Modifier;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class UserPOTest {
@@ -48,31 +49,47 @@ class UserPOTest {
     }
 
     @Test
-    void parametersAssemblesStringAndIntProperties() {
+    void parametersAssemblesPrimitiveAndCustomProperties() {
         UserPO user = new UserPO();
+        assertNull(user.getUserName());
+        assertTrue(user.isBoolean_true());
+        assertEquals((byte) 1, user.getByte_1());
+        assertEquals((short) 2, user.getShort_2());
         assertEquals(1, user.getInt_1());
         assertEquals(2, user.getInt_2());
         assertEquals(3, user.getInt_3());
+        assertEquals(18L, user.getLong_18());
+        assertEquals('U', user.getChar_U());
+        assertEquals(1.5f, user.getFloat_1_5());
+        assertEquals(2.25, user.getDouble_2_25());
+        assertNull(user.getHomeAddress());
 
+        Address home = new Address("Shanghai", "Nanjing Road");
         user.setUserName("alice");
+        user.setHomeAddress(home);
+        user.setBoolean_true(false);
         user.setInt_1(10);
-        user.setInt_2(20);
-        user.setInt_3(30);
 
         assertEquals("alice", user.getUserName());
+        assertEquals(home, user.getHomeAddress());
+        assertFalse(user.isBoolean_true());
         assertEquals(10, user.getInt_1());
-        assertEquals(20, user.getInt_2());
-        assertEquals(30, user.getInt_3());
     }
 
     @Test
     void assembledPropertiesLiveOnGeneratedSuperclass() throws Exception {
-        assertEquals("UserPO__Parameters", UserPO.class.getSuperclass().getSimpleName());
+        Class<?> generated = UserPO.class.getSuperclass();
+        assertEquals("UserPO__Parameters", generated.getSimpleName());
 
-        Field userName = UserPO.class.getSuperclass().getDeclaredField("userName");
+        Field userName = generated.getDeclaredField("userName");
         assertEquals(String.class, userName.getType());
         assertTrue(Modifier.isPrivate(userName.getModifiers()));
         assertFalse(Modifier.isStatic(userName.getModifiers()));
+
+        assertEquals(Long.class, generated.getDeclaredField("id").getType());
+        assertEquals(Address.class, generated.getDeclaredField("homeAddress").getType());
+        assertEquals(boolean.class, generated.getDeclaredField("boolean_true").getType());
+        assertEquals(long.class, generated.getDeclaredField("long_18").getType());
     }
 
     @Test
@@ -84,5 +101,6 @@ class UserPOTest {
         assertEquals("Dana", user.getName());
         assertEquals("dana", user.getUserName());
         assertTrue(user.toString().contains("Dana"));
+        assertTrue(user.toString().contains("dana"));
     }
 }
