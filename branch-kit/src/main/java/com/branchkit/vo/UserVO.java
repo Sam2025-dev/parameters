@@ -1,7 +1,7 @@
 package com.branchkit.vo;
 
 import com.branchkit.po.Address;
-import com.pojo.parameters.Parameter;
+import com.pojo.parameters.Of;
 import com.pojo.parameters.Parameters;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -16,7 +16,7 @@ import lombok.ToString;
 @Parameters(
         String = {"userName"},
         int_ = {1, 2, 3},
-        value = @Parameter(name = "homeAddress", type = Address.class)
+        of = @Of(Class = Address.class, names = {"homeAddress"})
 )
 public class UserVO extends UserVO__Parameters {
 }

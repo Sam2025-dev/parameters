@@ -53,16 +53,13 @@ final class AssembledProperties {
         if (!mergeExistingFields(type, byName, error)) {
             return null;
         }
-        if (!addNestedParameters(type, mirror, elements, byName, error)) {
+        if (!addOfProperties(type, mirror, elements, byName, error)) {
             return null;
         }
         if (!addNamedStrings(type, annotation.String(), byName, error)) {
             return null;
         }
         if (!addPrimitiveShorthands(type, annotation, byName, error)) {
-            return null;
-        }
-        if (!addTypeLiterals(type, mirror, elements, byName, error)) {
             return null;
         }
         if (byName.isEmpty()) {
@@ -129,7 +126,7 @@ final class AssembledProperties {
         return true;
     }
 
-    private static boolean addNestedParameters(
+    private static boolean addOfProperties(
             TypeElement type,
             AnnotationMirror mirror,
             Elements elements,
@@ -138,20 +135,32 @@ final class AssembledProperties {
         if (mirror == null) {
             return true;
         }
-        for (AnnotationMirror nested : nestedAnnotations(mirror, elements, "value")) {
-            String name = stringValue(nested, elements, "name");
-            TypeMirror propertyType = classValue(nested, elements, "type");
-            if (name == null || propertyType == null) {
-                error.accept(type, "Each @Parameter must declare name and type.");
+        for (AnnotationMirror nested : nestedAnnotations(mirror, elements, "of")) {
+            TypeMirror propertyType = classValue(nested, elements, "Class");
+            if (propertyType == null) {
+                error.accept(type, "Each @Of must declare Class.");
                 return false;
             }
-            if (!SourceVersion.isIdentifier(name) || SourceVersion.isKeyword(name)) {
-                error.accept(type, "Invalid @Parameter name: " + name);
-                return false;
+            List<String> names = stringValues(nested, elements, "names");
+            if (names.isEmpty()) {
+                String derived = decapitalize(simpleName(propertyType));
+                if (!SourceVersion.isIdentifier(derived) || SourceVersion.isKeyword(derived)) {
+                    error.accept(type, "Type " + propertyType
+                            + " produces invalid field name '" + derived
+                            + "'; declare names explicitly on @Of.");
+                    return false;
+                }
+                names = List.of(derived);
             }
-            AssembledProperty property = AssembledProperty.fromType(name, propertyType, null);
-            if (!putMerged(type, byName, property, error)) {
-                return false;
+            for (String name : names) {
+                if (!SourceVersion.isIdentifier(name) || SourceVersion.isKeyword(name)) {
+                    error.accept(type, "Invalid @Of property name: " + name);
+                    return false;
+                }
+                AssembledProperty property = AssembledProperty.fromType(name, propertyType, null);
+                if (!putMerged(type, byName, property, error)) {
+                    return false;
+                }
             }
         }
         return true;
@@ -232,29 +241,6 @@ final class AssembledProperties {
         for (double value : annotation.double_()) {
             String name = uniqueLiteralName("double", Double.toString(value), byName.keySet());
             AssembledProperty property = new AssembledProperty(name, "double", Double.toString(value), false, false);
-            if (!putMerged(type, byName, property, error)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static boolean addTypeLiterals(
-            TypeElement type,
-            AnnotationMirror mirror,
-            Elements elements,
-            Map<String, AssembledProperty> byName,
-            BiConsumer<Element, String> error) {
-        if (mirror == null) {
-            return true;
-        }
-        for (TypeMirror propertyType : classValues(mirror, elements, "type")) {
-            String simple = simpleName(propertyType);
-            String name = decapitalize(simple);
-            if (!SourceVersion.isIdentifier(name) || SourceVersion.isKeyword(name)) {
-                name = uniqueLiteralName("typed", simple, byName.keySet());
-            }
-            AssembledProperty property = AssembledProperty.fromType(name, propertyType, null);
             if (!putMerged(type, byName, property, error)) {
                 return false;
             }
@@ -485,32 +471,27 @@ final class AssembledProperties {
         return nested;
     }
 
-    static List<TypeMirror> classValues(AnnotationMirror mirror, Elements elements, String member) {
-        Object value = annotationValue(mirror, elements, member);
-        if (value instanceof TypeMirror typeMirror) {
-            return List.of(typeMirror);
-        }
-        if (!(value instanceof List<?> list)) {
-            return List.of();
-        }
-        List<TypeMirror> types = new ArrayList<>();
-        for (Object item : list) {
-            Object raw = item instanceof AnnotationValue annotationValue ? annotationValue.getValue() : item;
-            if (raw instanceof TypeMirror typeMirror) {
-                types.add(typeMirror);
-            }
-        }
-        return types;
-    }
-
     static TypeMirror classValue(AnnotationMirror mirror, Elements elements, String member) {
         Object value = annotationValue(mirror, elements, member);
         return value instanceof TypeMirror typeMirror ? typeMirror : null;
     }
 
-    static String stringValue(AnnotationMirror mirror, Elements elements, String member) {
+    static List<String> stringValues(AnnotationMirror mirror, Elements elements, String member) {
         Object value = annotationValue(mirror, elements, member);
-        return value instanceof String string ? string : null;
+        if (value instanceof String string) {
+            return List.of(string);
+        }
+        if (!(value instanceof List<?> list)) {
+            return List.of();
+        }
+        List<String> names = new ArrayList<>();
+        for (Object item : list) {
+            Object raw = item instanceof AnnotationValue annotationValue ? annotationValue.getValue() : item;
+            if (raw instanceof String string) {
+                names.add(string);
+            }
+        }
+        return names;
     }
 
     static Object annotationValue(AnnotationMirror mirror, Elements elements, String member) {
