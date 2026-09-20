@@ -426,8 +426,7 @@ class ParametersProcessorTest {
                         "        @Of(Class = List.class, typeArgs = {String.class}, names = {\"roles\"},",
                         "                initializer = \"java.util.Collections.emptyList()\"),",
                         "        @Of(Class = Map.class, typeArgs = {String.class, Address.class}, names = {\"addresses\"}),",
-                        "        @Of(Class = String.class, names = {\"status\"}, initializer = \"\\\"ACTIVE\\\"\",",
-                        "                annotations = {Deprecated.class})",
+                        "        @Of(Class = String.class, names = {\"status\"}, initializer = \"\\\"ACTIVE\\\"\")",
                         "})",
                         "public class RichVO extends RichVO__Parameters {",
                         "}"));
@@ -439,7 +438,6 @@ class ParametersProcessorTest {
                 .contentsAsUtf8String();
         generated.contains("private java.util.List<String> roles = java.util.Collections.emptyList();");
         generated.contains("private java.util.Map<String, com.example.Address> addresses;");
-        generated.contains("@Deprecated");
         generated.contains("private String status = \"ACTIVE\";");
     }
 
@@ -525,6 +523,52 @@ class ParametersProcessorTest {
         Compilation compilation = compile(source);
         assertThat(compilation).failed();
         assertThat(compilation).hadErrorContaining("@Of type and typeArgs cannot be combined");
+    }
+
+    @Test
+    void parametersRemoveAnnotDropsCopiedAnnotationsFromMemberFields() {
+        JavaFileObject label = JavaFileObjects.forSourceString(
+                "com.example.Label",
+                src(
+                        "package com.example;",
+                        "",
+                        "import java.lang.annotation.ElementType;",
+                        "import java.lang.annotation.Retention;",
+                        "import java.lang.annotation.RetentionPolicy;",
+                        "import java.lang.annotation.Target;",
+                        "",
+                        "@Target(ElementType.FIELD)",
+                        "@Retention(RetentionPolicy.SOURCE)",
+                        "public @interface Label {",
+                        "    String value();",
+                        "    int max() default 0;",
+                        "}"));
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.ClassStripVO",
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "",
+                        "@Parameters(removeAnnot = {Deprecated.class, Label.class})",
+                        "public class ClassStripVO extends ClassStripVO__Parameters {",
+                        "    @Deprecated",
+                        "    @Label(value = \"n\", max = 32)",
+                        "    private String userName;",
+                        "    @Deprecated",
+                        "    private int countryCode;",
+                        "}"));
+
+        Compilation compilation = compile(label, source);
+        assertThat(compilation).succeeded();
+        com.google.common.truth.StringSubject generated = assertThat(compilation)
+                .generatedSourceFile("com.example.ClassStripVO__Parameters")
+                .contentsAsUtf8String();
+        generated.contains("private String userName;");
+        generated.contains("private int countryCode;");
+        generated.doesNotContain("@Deprecated");
+        generated.doesNotContain("@com.example.Label");
+        generated.doesNotContain("max = 32");
     }
 
     @Test

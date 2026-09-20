@@ -48,6 +48,13 @@ public @interface Parameters {
 
     Of[] of() default {};
 
+    /**
+     * Annotation types stripped from every generated field after merge,
+     * including mirrors copied from member variables. Matches by type, so
+     * {@code Size.class} removes {@code @Size(min = 1)}.
+     */
+    Class<? extends Annotation>[] removeAnnot() default {};
+
     @Documented
     @Target({})
     @Retention(RetentionPolicy.SOURCE)
@@ -81,12 +88,5 @@ public @interface Parameters {
          * {@code "\"ACTIVE\""}, or {@code "java.util.Collections.emptyList()"}.
          */
         String initializer() default "";
-
-        /**
-         * Marker (or all-defaults) annotations copied onto the generated field.
-         * Annotations that need attributes should be declared on an instance field;
-         * those mirrors are copied onto the generated field as well.
-         */
-        Class<? extends Annotation>[] annotations() default {};
     }
 }
