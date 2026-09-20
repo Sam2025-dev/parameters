@@ -120,6 +120,9 @@ final class AssembledProperties {
             error.accept(type, "@Parameters must declare at least one property or instance field to merge.");
             return null;
         }
+        if (!applyParametersRemoveAnnot(type, mirror, elements, byName, error)) {
+            return null;
+        }
         return new AssembledProperties(new ArrayList<AssembledProperty>(byName.values()));
     }
 
@@ -390,20 +393,54 @@ final class AssembledProperties {
         return true;
     }
 
+    private static boolean applyParametersRemoveAnnot(
+            TypeElement type,
+            AnnotationMirror mirror,
+            Elements elements,
+            Map<String, AssembledProperty> byName,
+            BiConsumer<Element, String> error) {
+        if (mirror == null) {
+            return true;
+        }
+        List<String> removedAnnotations = new ArrayList<String>();
+        if (!collectRemovedAnnotations(
+                type, mirror, elements, "@Parameters removeAnnot", removedAnnotations, error)) {
+            return false;
+        }
+        if (removedAnnotations.isEmpty()) {
+            return true;
+        }
+        for (String name : new ArrayList<String>(byName.keySet())) {
+            applyRemovedAnnotations(byName, name, removedAnnotations);
+        }
+        return true;
+    }
+
     private static boolean addOfRemovedAnnotations(
             TypeElement type,
             AnnotationMirror nested,
             Elements elements,
             List<String> removedAnnotations,
             BiConsumer<Element, String> error) {
+        return collectRemovedAnnotations(
+                type, nested, elements, "@Of removeAnnot", removedAnnotations, error);
+    }
+
+    private static boolean collectRemovedAnnotations(
+            TypeElement type,
+            AnnotationMirror nested,
+            Elements elements,
+            String errorLabel,
+            List<String> removedAnnotations,
+            BiConsumer<Element, String> error) {
         for (TypeMirror annotationType : classValues(nested, elements, "removeAnnot")) {
             if (annotationType.getKind() != TypeKind.DECLARED) {
-                error.accept(type, "@Of removeAnnot must be annotation types: " + annotationType);
+                error.accept(type, errorLabel + " must be annotation types: " + annotationType);
                 return false;
             }
             Element annotationElement = ((DeclaredType) annotationType).asElement();
             if (annotationElement.getKind() != ElementKind.ANNOTATION_TYPE) {
-                error.accept(type, "@Of removeAnnot must be annotation types: " + annotationType);
+                error.accept(type, errorLabel + " must be annotation types: " + annotationType);
                 return false;
             }
             String rendered = AssembledProperty.renderType(annotationType);

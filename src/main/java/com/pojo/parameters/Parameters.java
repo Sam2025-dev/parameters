@@ -49,6 +49,14 @@ public @interface Parameters {
     Of[] of() default {};
 
     /**
+     * Annotation types stripped from every generated field after merge,
+     * including mirrors copied from member variables. Matches by type, so
+     * {@code Size.class} removes {@code @Size(min = 1)}. Applied after
+     * {@link Of#annotations()} and {@link Of#removeAnnot()}.
+     */
+    Class<? extends Annotation>[] removeAnnot() default {};
+
+    /**
      * Declares a property on {@link Parameters#of()}, or place it on a model
      * field to add {@link #annotations()} or drop copied field annotations with
      * {@link #removeAnnot()}.

@@ -109,6 +109,9 @@ When `@Of` omits `names`, the field is the decapitalized simple class name
 (`Address` → `address`). Types whose simple name is not a valid identifier
 (for example `Long` → `long`) must declare `names`.
 
+`@Parameters.removeAnnot` strips annotation types from every generated field
+after merge, including copies from member variables.
+
 `@Of` is also how defaults, field annotations, `List`/`Map`, and generics are
 declared. Class literals erase type arguments, so those cases need the extra
 members below.
@@ -239,9 +242,26 @@ when the class also uses `@Data`, so accessors live on the generated superclass
 instead of a second field on the subclass.
 
 `removeAnnot` drops copied (or `@Of`) annotations by type, including mirrors
-that have attributes. Put `@Of` on the member field, or list that field in
-`@Parameters.of`. It runs after merge, so it wins over both the model field
-and `annotations` on the same `@Of`:
+that have attributes. On `@Parameters` it applies to every generated field,
+which is the usual way to strip annotations copied from member variables:
+
+```java
+@Parameters(removeAnnot = {Deprecated.class, Size.class})
+public class UserVO extends UserVO__Parameters {
+    @Size(min = 1, max = 32)
+    @JsonProperty("user_name")
+    @Deprecated
+    private String userName;
+}
+```
+
+The generated field keeps `@JsonProperty("user_name")` and drops `@Deprecated`
+and `@Size`. `Size.class` matches `@Size(min = 1, max = 32)` because removal
+is by annotation type, not the exact mirror text.
+
+Per-field removal still works on `@Of` (on the member, or in `@Parameters.of`).
+It runs after merge, so it wins over both the model field and `annotations`
+on the same `@Of`:
 
 ```java
 @Parameters
@@ -253,13 +273,6 @@ public class UserVO extends UserVO__Parameters {
     private String userName;
 }
 ```
-
-The generated field keeps `@JsonProperty("user_name")` and drops `@Deprecated`
-and `@Size`. `Size.class` matches `@Size(min = 1, max = 32)` because removal
-is by annotation type, not the exact mirror text.
-
-The same removal can be declared on `@Parameters.of` without repeating the
-field type when the member already exists:
 
 ```java
 @Parameters(
