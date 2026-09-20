@@ -7,11 +7,11 @@ superclass. The processor assembles annotation properties and existing instance
 fields into that superclass with JavaBean accessors, `equals`, `hashCode`, and
 `toString`.
 
-Artifact: `com.pojo:parameters:0.1-SNAPSHOT`
+Artifact: `com.github.parameters:parameters:0.1-SNAPSHOT`
 
 ```xml
 <dependency>
-    <groupId>com.pojo</groupId>
+    <groupId>com.github.parameters</groupId>
     <artifactId>parameters</artifactId>
     <version>0.1-SNAPSHOT</version>
 </dependency>
@@ -22,7 +22,7 @@ Register it as an annotation processor next to Lombok:
 ```xml
 <annotationProcessorPaths>
     <path>
-        <groupId>com.pojo</groupId>
+        <groupId>com.github.parameters</groupId>
         <artifactId>parameters</artifactId>
         <version>0.1-SNAPSHOT</version>
     </path>
