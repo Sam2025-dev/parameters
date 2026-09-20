@@ -120,6 +120,7 @@ members below.
 | `names` | One or more field names; derived from the type when omitted |
 | `initializer` | Java expression copied onto the generated field |
 | `annotations` | Marker (or all-defaults) annotations copied onto the generated field |
+| `removeAnnotations` | Annotation types stripped from the generated field after merge |
 
 `Class` and `type` are alternatives. `type` and `typeArgs` cannot be combined:
 put nested generics in `type`.
@@ -235,6 +236,29 @@ public class UserVO extends UserVO__Parameters {
 Lombok annotations are not copied. Prefer declaring properties on `@Parameters`
 when the class also uses `@Data`, so accessors live on the generated superclass
 instead of a second field on the subclass.
+
+`removeAnnotations` drops copied (or `@Of`) annotations by type, including
+mirrors that have attributes. It runs after merge, so it wins over both the
+model field and `annotations` on the same `@Of`:
+
+```java
+@Parameters(
+    of = @Of(
+        Class = String.class,
+        names = {"userName"},
+        annotations = {Deprecated.class},
+        removeAnnotations = {Size.class})
+)
+public class UserVO extends UserVO__Parameters {
+    @Size(min = 1, max = 32)
+    @JsonProperty("user_name")
+    private String userName;
+}
+```
+
+The generated field keeps `@JsonProperty("user_name")` and `@Deprecated`, and
+drops `@Size`. `Size.class` matches `@Size(min = 1, max = 32)` because removal
+is by annotation type, not the exact mirror text.
 
 ## Collections, maps, and generics
 

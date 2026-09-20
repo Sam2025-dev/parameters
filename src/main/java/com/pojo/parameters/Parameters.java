@@ -88,5 +88,12 @@ public @interface Parameters {
          * those mirrors are copied onto the generated field as well.
          */
         Class<? extends Annotation>[] annotations() default {};
+
+        /**
+         * Annotation types stripped from the generated field after merge. Matches by
+         * type, so {@code Size.class} removes {@code @Size(min = 1)} copied from the
+         * model field. Applied after {@link #annotations()} on the same {@code @Of}.
+         */
+        Class<? extends Annotation>[] removeAnnotations() default {};
     }
 }

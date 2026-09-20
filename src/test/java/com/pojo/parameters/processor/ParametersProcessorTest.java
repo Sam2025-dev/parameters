@@ -528,6 +528,115 @@ class ParametersProcessorTest {
     }
 
     @Test
+    void ofRemoveAnnotationsDropsCopiedFieldMirrorsByType() {
+        JavaFileObject label = JavaFileObjects.forSourceString(
+                "com.example.Label",
+                src(
+                        "package com.example;",
+                        "",
+                        "import java.lang.annotation.ElementType;",
+                        "import java.lang.annotation.Retention;",
+                        "import java.lang.annotation.RetentionPolicy;",
+                        "import java.lang.annotation.Target;",
+                        "",
+                        "@Target(ElementType.FIELD)",
+                        "@Retention(RetentionPolicy.SOURCE)",
+                        "public @interface Label {",
+                        "    String value();",
+                        "    int max() default 0;",
+                        "}"));
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.StripVO",
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
+                        "",
+                        "@Parameters(of = @Of(",
+                        "        Class = String.class,",
+                        "        names = {\"userName\"},",
+                        "        annotations = {Deprecated.class},",
+                        "        removeAnnotations = {Label.class}))",
+                        "public class StripVO extends StripVO__Parameters {",
+                        "    @Deprecated",
+                        "    @Label(value = \"n\", max = 32)",
+                        "    private String userName;",
+                        "}"));
+
+        Compilation compilation = compile(label, source);
+        assertThat(compilation).succeeded();
+        com.google.common.truth.StringSubject generated = assertThat(compilation)
+                .generatedSourceFile("com.example.StripVO__Parameters")
+                .contentsAsUtf8String();
+        generated.contains("@Deprecated");
+        generated.contains("private String userName;");
+        generated.doesNotContain("@com.example.Label");
+        generated.doesNotContain("max = 32");
+    }
+
+    @Test
+    void ofRemoveAnnotationsDropsCopiedDeprecatedFromTheModelField() {
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.DropDeprecatedVO",
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
+                        "",
+                        "@Parameters(of = @Of(",
+                        "        Class = String.class,",
+                        "        names = {\"userName\"},",
+                        "        removeAnnotations = {Deprecated.class}))",
+                        "public class DropDeprecatedVO extends DropDeprecatedVO__Parameters {",
+                        "    @Deprecated",
+                        "    private String userName;",
+                        "}"));
+
+        Compilation compilation = compile(source);
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("com.example.DropDeprecatedVO__Parameters")
+                .contentsAsUtf8String()
+                .doesNotContain("@Deprecated");
+        assertThat(compilation)
+                .generatedSourceFile("com.example.DropDeprecatedVO__Parameters")
+                .contentsAsUtf8String()
+                .contains("private String userName;");
+    }
+
+    @Test
+    void ofRemoveAnnotationsWinsOverAnnotationsOnTheSameOf() {
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.RemoveWinsVO",
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
+                        "",
+                        "@Parameters(of = @Of(",
+                        "        Class = String.class,",
+                        "        names = {\"status\"},",
+                        "        annotations = {Deprecated.class},",
+                        "        removeAnnotations = {Deprecated.class}))",
+                        "public class RemoveWinsVO extends RemoveWinsVO__Parameters {",
+                        "}"));
+
+        Compilation compilation = compile(source);
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("com.example.RemoveWinsVO__Parameters")
+                .contentsAsUtf8String()
+                .doesNotContain("@Deprecated");
+        assertThat(compilation)
+                .generatedSourceFile("com.example.RemoveWinsVO__Parameters")
+                .contentsAsUtf8String()
+                .contains("private String status;");
+    }
+
+    @Test
     void ofRequiresClassOrType() {
         JavaFileObject source = JavaFileObjects.forSourceString(
                 "com.example.EmptyOfVO",

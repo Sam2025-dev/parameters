@@ -248,6 +248,10 @@ final class AssembledProperties {
             if (!addOfAnnotationMarkers(type, nested, elements, annotations, error)) {
                 return false;
             }
+            List<String> removedAnnotations = new ArrayList<String>();
+            if (!addOfRemovedAnnotations(type, nested, elements, removedAnnotations, error)) {
+                return false;
+            }
 
             List<String> names = stringValues(nested, elements, "names");
             if (names.isEmpty()) {
@@ -273,6 +277,9 @@ final class AssembledProperties {
                 if (!putMerged(type, byName, property, error)) {
                     return false;
                 }
+                if (!removedAnnotations.isEmpty()) {
+                    byName.put(name, byName.get(name).withoutAnnotationTypes(removedAnnotations));
+                }
             }
         }
         return true;
@@ -297,6 +304,30 @@ final class AssembledProperties {
             String rendered = "@" + AssembledProperty.renderType(annotationType);
             if (!annotations.contains(rendered)) {
                 annotations.add(rendered);
+            }
+        }
+        return true;
+    }
+
+    private static boolean addOfRemovedAnnotations(
+            TypeElement type,
+            AnnotationMirror nested,
+            Elements elements,
+            List<String> removedAnnotations,
+            BiConsumer<Element, String> error) {
+        for (TypeMirror annotationType : classValues(nested, elements, "removeAnnotations")) {
+            if (annotationType.getKind() != TypeKind.DECLARED) {
+                error.accept(type, "@Of removeAnnotations must be annotation types: " + annotationType);
+                return false;
+            }
+            Element annotationElement = ((DeclaredType) annotationType).asElement();
+            if (annotationElement.getKind() != ElementKind.ANNOTATION_TYPE) {
+                error.accept(type, "@Of removeAnnotations must be annotation types: " + annotationType);
+                return false;
+            }
+            String rendered = AssembledProperty.renderType(annotationType);
+            if (!removedAnnotations.contains(rendered)) {
+                removedAnnotations.add(rendered);
             }
         }
         return true;
@@ -837,6 +868,31 @@ final class AssembledProperties {
             }
             return new AssembledProperty(
                     name, typeSource, mergedInitializer, primitiveBoolean, array, mergedAnnotations);
+        }
+
+        AssembledProperty withoutAnnotationTypes(List<String> removedTypes) {
+            if (removedTypes == null || removedTypes.isEmpty() || annotations.isEmpty()) {
+                return this;
+            }
+            List<String> kept = new ArrayList<String>();
+            for (String annotation : annotations) {
+                if (!removedTypes.contains(annotationTypeName(annotation))) {
+                    kept.add(annotation);
+                }
+            }
+            if (kept.size() == annotations.size()) {
+                return this;
+            }
+            return new AssembledProperty(name, typeSource, initializer, primitiveBoolean, array, kept);
+        }
+
+        static String annotationTypeName(String rendered) {
+            String type = rendered.startsWith("@") ? rendered.substring(1) : rendered;
+            int paren = type.indexOf('(');
+            if (paren >= 0) {
+                type = type.substring(0, paren);
+            }
+            return type.trim();
         }
 
         String name() {
