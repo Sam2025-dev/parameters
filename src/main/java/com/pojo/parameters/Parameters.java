@@ -48,8 +48,13 @@ public @interface Parameters {
 
     Of[] of() default {};
 
+    /**
+     * Declares a property on {@link Parameters#of()}, or place it on a model
+     * field to add {@link #annotations()} or drop copied field annotations with
+     * {@link #removeAnnot()}.
+     */
     @Documented
-    @Target({})
+    @Target(ElementType.FIELD)
     @Retention(RetentionPolicy.SOURCE)
     public @interface Of {
 
@@ -92,8 +97,10 @@ public @interface Parameters {
         /**
          * Annotation types stripped from the generated field after merge. Matches by
          * type, so {@code Size.class} removes {@code @Size(min = 1)} copied from the
-         * model field. Applied after {@link #annotations()} on the same {@code @Of}.
+         * model field. Place {@code @Of} on that field, or list the field in
+         * {@code @Parameters.of}. Applied after {@link #annotations()} on the same
+         * {@code @Of}.
          */
-        Class<? extends Annotation>[] removeAnnotations() default {};
+        Class<? extends Annotation>[] removeAnnot() default {};
     }
 }

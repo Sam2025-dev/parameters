@@ -557,7 +557,7 @@ class ParametersProcessorTest {
                         "        Class = String.class,",
                         "        names = {\"userName\"},",
                         "        annotations = {Deprecated.class},",
-                        "        removeAnnotations = {Label.class}))",
+                        "        removeAnnot = {Label.class}))",
                         "public class StripVO extends StripVO__Parameters {",
                         "    @Deprecated",
                         "    @Label(value = \"n\", max = 32)",
@@ -588,7 +588,7 @@ class ParametersProcessorTest {
                         "@Parameters(of = @Of(",
                         "        Class = String.class,",
                         "        names = {\"userName\"},",
-                        "        removeAnnotations = {Deprecated.class}))",
+                        "        removeAnnot = {Deprecated.class}))",
                         "public class DropDeprecatedVO extends DropDeprecatedVO__Parameters {",
                         "    @Deprecated",
                         "    private String userName;",
@@ -620,7 +620,7 @@ class ParametersProcessorTest {
                         "        Class = String.class,",
                         "        names = {\"status\"},",
                         "        annotations = {Deprecated.class},",
-                        "        removeAnnotations = {Deprecated.class}))",
+                        "        removeAnnot = {Deprecated.class}))",
                         "public class RemoveWinsVO extends RemoveWinsVO__Parameters {",
                         "}"));
 
@@ -634,6 +634,99 @@ class ParametersProcessorTest {
                 .generatedSourceFile("com.example.RemoveWinsVO__Parameters")
                 .contentsAsUtf8String()
                 .contains("private String status;");
+    }
+
+    @Test
+    void ofRemoveAnnotOnMemberFieldDropsCopiedMirrors() {
+        JavaFileObject label = JavaFileObjects.forSourceString(
+                "com.example.Label",
+                src(
+                        "package com.example;",
+                        "",
+                        "import java.lang.annotation.ElementType;",
+                        "import java.lang.annotation.Retention;",
+                        "import java.lang.annotation.RetentionPolicy;",
+                        "import java.lang.annotation.Target;",
+                        "",
+                        "@Target(ElementType.FIELD)",
+                        "@Retention(RetentionPolicy.SOURCE)",
+                        "public @interface Label {",
+                        "    String value();",
+                        "    int max() default 0;",
+                        "}"));
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.FieldStripVO",
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
+                        "",
+                        "@Parameters",
+                        "public class FieldStripVO extends FieldStripVO__Parameters {",
+                        "    @Deprecated",
+                        "    @Label(value = \"n\", max = 32)",
+                        "    @Of(removeAnnot = {Label.class})",
+                        "    private String userName;",
+                        "}"));
+
+        Compilation compilation = compile(label, source);
+        assertThat(compilation).succeeded();
+        com.google.common.truth.StringSubject generated = assertThat(compilation)
+                .generatedSourceFile("com.example.FieldStripVO__Parameters")
+                .contentsAsUtf8String();
+        generated.contains("@Deprecated");
+        generated.contains("private String userName;");
+        generated.doesNotContain("@com.example.Label");
+        generated.doesNotContain("max = 32");
+        generated.doesNotContain("Parameters.Of");
+    }
+
+    @Test
+    void ofRemoveAnnotWithoutClassUpdatesExistingMemberField() {
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.ExistingFieldVO",
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
+                        "",
+                        "@Parameters(of = @Of(names = {\"userName\"}, removeAnnot = {Deprecated.class}))",
+                        "public class ExistingFieldVO extends ExistingFieldVO__Parameters {",
+                        "    @Deprecated",
+                        "    private String userName;",
+                        "}"));
+
+        Compilation compilation = compile(source);
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("com.example.ExistingFieldVO__Parameters")
+                .contentsAsUtf8String()
+                .doesNotContain("@Deprecated");
+        assertThat(compilation)
+                .generatedSourceFile("com.example.ExistingFieldVO__Parameters")
+                .contentsAsUtf8String()
+                .contains("private String userName;");
+    }
+
+    @Test
+    void ofRemoveAnnotWithoutClassRejectsUnknownName() {
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.MissingFieldVO",
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
+                        "",
+                        "@Parameters(of = @Of(names = {\"userName\"}, removeAnnot = {Deprecated.class}))",
+                        "public class MissingFieldVO extends MissingFieldVO__Parameters {",
+                        "}"));
+
+        Compilation compilation = compile(source);
+        assertThat(compilation).failed();
+        assertThat(compilation).hadErrorContaining("can only update existing properties: userName");
     }
 
     @Test
