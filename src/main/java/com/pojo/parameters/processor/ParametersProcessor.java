@@ -1,6 +1,10 @@
 package com.pojo.parameters.processor;
 
 import com.pojo.parameters.Parameters;
+import com.sun.source.tree.ExpressionTree;
+import com.sun.source.tree.VariableTree;
+import com.sun.source.util.TreePath;
+import com.sun.source.util.Trees;
 
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Filer;
@@ -15,6 +19,7 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.NestingKind;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 import java.io.IOException;
@@ -32,6 +37,8 @@ public final class ParametersProcessor extends AbstractProcessor {
     static final String SUPERCLASS_SUFFIX = "__Parameters";
 
     private final Set<String> written = new LinkedHashSet<>();
+    private Trees trees;
+    private boolean treesResolved;
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
@@ -67,6 +74,7 @@ public final class ParametersProcessor extends AbstractProcessor {
                 annotation,
                 parametersMirror(type),
                 processingEnv.getElementUtils(),
+                this::fieldInitializer,
                 this::error);
         if (properties == null) {
             return;
@@ -119,5 +127,42 @@ public final class ParametersProcessor extends AbstractProcessor {
     void error(Element element, String message) {
         Messager messager = processingEnv.getMessager();
         messager.printMessage(Diagnostic.Kind.ERROR, message, element);
+    }
+
+    private String fieldInitializer(VariableElement field) {
+        Object constant = field.getConstantValue();
+        if (constant != null) {
+            return AssembledProperties.renderConstant(constant);
+        }
+        Trees ast = trees();
+        if (ast == null) {
+            return null;
+        }
+        try {
+            TreePath path = ast.getPath(field);
+            if (path == null || !(path.getLeaf() instanceof VariableTree)) {
+                return null;
+            }
+            ExpressionTree init = ((VariableTree) path.getLeaf()).getInitializer();
+            if (init == null) {
+                return null;
+            }
+            String source = init.toString().trim();
+            return source.isEmpty() ? null : source;
+        } catch (RuntimeException ignored) {
+            return null;
+        }
+    }
+
+    private Trees trees() {
+        if (!treesResolved) {
+            treesResolved = true;
+            try {
+                trees = Trees.instance(processingEnv);
+            } catch (IllegalArgumentException ignored) {
+                trees = null;
+            }
+        }
+        return trees;
     }
 }

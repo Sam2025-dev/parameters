@@ -12,9 +12,12 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.ArrayType;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Target;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -23,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 /**
  * Collects annotation-declared properties and instance fields into one list.
@@ -51,10 +55,11 @@ final class AssembledProperties {
             Parameters annotation,
             AnnotationMirror mirror,
             Elements elements,
+            Function<VariableElement, String> fieldInitializer,
             BiConsumer<Element, String> error) {
         Map<String, AssembledProperty> byName = new LinkedHashMap<String, AssembledProperty>();
 
-        if (!mergeExistingFields(type, byName, error)) {
+        if (!mergeExistingFields(type, fieldInitializer, byName, error)) {
             return null;
         }
         if (!addNamedProperties(type, annotation.String(), "String", false, byName, error)) {
@@ -132,6 +137,9 @@ final class AssembledProperties {
         java.append(" */\n");
         java.append("public abstract class ").append(className).append(" {\n\n");
         for (AssembledProperty property : properties) {
+            for (String annotation : property.annotations()) {
+                java.append("    ").append(annotation).append('\n');
+            }
             java.append("    private ").append(property.typeSource()).append(' ').append(property.name());
             if (property.initializer() != null) {
                 java.append(" = ").append(property.initializer());
@@ -160,6 +168,7 @@ final class AssembledProperties {
 
     private static boolean mergeExistingFields(
             TypeElement type,
+            Function<VariableElement, String> fieldInitializer,
             Map<String, AssembledProperty> byName,
             BiConsumer<Element, String> error) {
         for (Element enclosed : type.getEnclosedElements()) {
@@ -175,7 +184,12 @@ final class AssembledProperties {
                 error.accept(field, "Cannot merge field into @Parameters: invalid name " + name);
                 return false;
             }
-            AssembledProperty property = AssembledProperty.fromType(name, field.asType(), null);
+            AssembledProperty property = AssembledProperty.fromType(
+                    name,
+                    field.asType(),
+                    Collections.<TypeMirror>emptyList(),
+                    fieldInitializer.apply(field),
+                    renderFieldAnnotations(field));
             if (!putMerged(type, byName, property, error)) {
                 return false;
             }
@@ -194,15 +208,54 @@ final class AssembledProperties {
         }
         for (AnnotationMirror nested : nestedAnnotations(mirror, elements, "of")) {
             TypeMirror propertyType = classValue(nested, elements, "Class");
-            if (propertyType == null) {
-                error.accept(type, "Each @Of must declare Class.");
+            boolean classSpecified = propertyType != null && propertyType.getKind() != TypeKind.VOID;
+            String typeOverride = optionalString(nested, elements, "type");
+            if (!classSpecified && typeOverride == null) {
+                error.accept(type, "Each @Of must declare Class or type.");
                 return false;
             }
+
+            List<TypeMirror> typeArgs = classValues(nested, elements, "typeArgs");
+            if (typeOverride != null && !typeArgs.isEmpty()) {
+                error.accept(type, "@Of type and typeArgs cannot be combined; put nested generics in type.");
+                return false;
+            }
+            if (!typeArgs.isEmpty()) {
+                if (!classSpecified) {
+                    error.accept(type, "@Of typeArgs requires Class.");
+                    return false;
+                }
+                int expected = typeParameterCount(propertyType);
+                if (expected == 0) {
+                    error.accept(type, "typeArgs can only be used with generic types: " + propertyType);
+                    return false;
+                }
+                if (typeArgs.size() != expected) {
+                    error.accept(type, "Type " + propertyType + " expects " + expected
+                            + " type argument(s), not " + typeArgs.size() + ".");
+                    return false;
+                }
+                for (TypeMirror arg : typeArgs) {
+                    if (arg.getKind() == TypeKind.VOID) {
+                        error.accept(type, "Invalid typeArgs value: void.");
+                        return false;
+                    }
+                }
+            }
+
+            String initializer = optionalString(nested, elements, "initializer");
+            List<String> annotations = new ArrayList<String>();
+            if (!addOfAnnotationMarkers(type, nested, elements, annotations, error)) {
+                return false;
+            }
+
             List<String> names = stringValues(nested, elements, "names");
             if (names.isEmpty()) {
-                String derived = decapitalize(simpleName(propertyType));
+                String derived = typeOverride != null
+                        ? decapitalize(simpleNameFromSource(typeOverride))
+                        : decapitalize(simpleName(propertyType));
                 if (!SourceVersion.isIdentifier(derived) || SourceVersion.isKeyword(derived)) {
-                    error.accept(type, "Type " + propertyType
+                    error.accept(type, "Type " + (typeOverride != null ? typeOverride : propertyType)
                             + " produces invalid field name '" + derived
                             + "'; declare names explicitly on @Of.");
                     return false;
@@ -214,10 +267,36 @@ final class AssembledProperties {
                     error.accept(type, "Invalid @Of property name: " + name);
                     return false;
                 }
-                AssembledProperty property = AssembledProperty.fromType(name, propertyType, null);
+                AssembledProperty property = typeOverride != null
+                        ? AssembledProperty.fromSource(name, typeOverride, initializer, annotations)
+                        : AssembledProperty.fromType(name, propertyType, typeArgs, initializer, annotations);
                 if (!putMerged(type, byName, property, error)) {
                     return false;
                 }
+            }
+        }
+        return true;
+    }
+
+    private static boolean addOfAnnotationMarkers(
+            TypeElement type,
+            AnnotationMirror nested,
+            Elements elements,
+            List<String> annotations,
+            BiConsumer<Element, String> error) {
+        for (TypeMirror annotationType : classValues(nested, elements, "annotations")) {
+            if (annotationType.getKind() != TypeKind.DECLARED) {
+                error.accept(type, "@Of annotations must be annotation types: " + annotationType);
+                return false;
+            }
+            Element annotationElement = ((DeclaredType) annotationType).asElement();
+            if (annotationElement.getKind() != ElementKind.ANNOTATION_TYPE) {
+                error.accept(type, "@Of annotations must be annotation types: " + annotationType);
+                return false;
+            }
+            String rendered = "@" + AssembledProperty.renderType(annotationType);
+            if (!annotations.contains(rendered)) {
+                annotations.add(rendered);
             }
         }
         return true;
@@ -236,7 +315,8 @@ final class AssembledProperties {
                 error.accept(type, "Invalid " + typeSource + " property name: " + name);
                 return false;
             }
-            AssembledProperty property = new AssembledProperty(name, typeSource, null, primitiveBoolean, false);
+            AssembledProperty property = new AssembledProperty(
+                    name, typeSource, null, primitiveBoolean, false, Collections.<String>emptyList());
             if (!putMerged(type, byName, property, error)) {
                 return false;
             }
@@ -255,9 +335,7 @@ final class AssembledProperties {
             return true;
         }
         if (existing.typeSource().equals(property.typeSource())) {
-            if (existing.initializer() == null && property.initializer() != null) {
-                byName.put(property.name(), property);
-            }
+            byName.put(property.name(), existing.mergeWith(property));
             return true;
         }
         error.accept(type, "Duplicate property name with conflicting types: " + property.name()
@@ -385,11 +463,32 @@ final class AssembledProperties {
     }
 
     static String simpleName(TypeMirror type) {
-        String rendered = type.toString();
-        int array = rendered.indexOf('[');
-        String core = array < 0 ? rendered : rendered.substring(0, array);
+        return simpleNameFromSource(type.toString());
+    }
+
+    static String simpleNameFromSource(String type) {
+        String core = stripTopLevelGenerics(type.trim());
+        while (core.endsWith("[]")) {
+            core = core.substring(0, core.length() - 2).trim();
+        }
         int lastDot = core.lastIndexOf('.');
         return lastDot < 0 ? core : core.substring(lastDot + 1);
+    }
+
+    static String stripTopLevelGenerics(String type) {
+        int depth = 0;
+        StringBuilder stripped = new StringBuilder();
+        for (int i = 0; i < type.length(); i++) {
+            char c = type.charAt(i);
+            if (c == '<') {
+                depth++;
+            } else if (c == '>') {
+                depth--;
+            } else if (depth == 0) {
+                stripped.append(c);
+            }
+        }
+        return stripped.toString().trim();
     }
 
     static List<AnnotationMirror> nestedAnnotations(AnnotationMirror mirror, Elements elements, String member) {
@@ -413,6 +512,25 @@ final class AssembledProperties {
         return value instanceof TypeMirror ? (TypeMirror) value : null;
     }
 
+    static List<TypeMirror> classValues(AnnotationMirror mirror, Elements elements, String member) {
+        Object value = annotationValue(mirror, elements, member);
+        if (value instanceof TypeMirror) {
+            return Collections.singletonList((TypeMirror) value);
+        }
+        if (!(value instanceof List<?>)) {
+            return Collections.emptyList();
+        }
+        List<?> list = (List<?>) value;
+        List<TypeMirror> types = new ArrayList<TypeMirror>();
+        for (Object item : list) {
+            Object raw = item instanceof AnnotationValue ? ((AnnotationValue) item).getValue() : item;
+            if (raw instanceof TypeMirror) {
+                types.add((TypeMirror) raw);
+            }
+        }
+        return types;
+    }
+
     static List<String> stringValues(AnnotationMirror mirror, Elements elements, String member) {
         Object value = annotationValue(mirror, elements, member);
         if (value instanceof String) {
@@ -432,6 +550,15 @@ final class AssembledProperties {
         return names;
     }
 
+    static String optionalString(AnnotationMirror mirror, Elements elements, String member) {
+        Object value = annotationValue(mirror, elements, member);
+        if (!(value instanceof String)) {
+            return null;
+        }
+        String text = ((String) value).trim();
+        return text.isEmpty() ? null : text;
+    }
+
     static Object annotationValue(AnnotationMirror mirror, Elements elements, String member) {
         for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry
                 : elements.getElementValuesWithDefaults(mirror).entrySet()) {
@@ -442,6 +569,188 @@ final class AssembledProperties {
         return null;
     }
 
+    static int typeParameterCount(TypeMirror propertyType) {
+        if (propertyType.getKind() != TypeKind.DECLARED) {
+            return 0;
+        }
+        Element element = ((DeclaredType) propertyType).asElement();
+        if (!(element instanceof TypeElement)) {
+            return 0;
+        }
+        return ((TypeElement) element).getTypeParameters().size();
+    }
+
+    static List<String> renderFieldAnnotations(VariableElement field) {
+        List<String> annotations = new ArrayList<String>();
+        for (AnnotationMirror mirror : field.getAnnotationMirrors()) {
+            if (!shouldCopyFieldAnnotation(mirror)) {
+                continue;
+            }
+            annotations.add(renderAnnotationMirror(mirror));
+        }
+        return annotations;
+    }
+
+    static boolean shouldCopyFieldAnnotation(AnnotationMirror mirror) {
+        Element annotationElement = mirror.getAnnotationType().asElement();
+        if (annotationElement.getKind() != ElementKind.ANNOTATION_TYPE) {
+            return false;
+        }
+        TypeElement annotationType = (TypeElement) annotationElement;
+        String qualified = annotationType.getQualifiedName().toString();
+        if (qualified.startsWith("lombok.") || qualified.startsWith("com.pojo.parameters.")) {
+            return false;
+        }
+        Target target = annotationType.getAnnotation(Target.class);
+        if (target == null) {
+            return true;
+        }
+        ElementType[] targets = target.value();
+        for (int i = 0; i < targets.length; i++) {
+            if (targets[i] == ElementType.FIELD || targets[i] == ElementType.TYPE_USE) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static String renderAnnotationMirror(AnnotationMirror mirror) {
+        StringBuilder rendered = new StringBuilder();
+        rendered.append('@').append(AssembledProperty.renderType(mirror.getAnnotationType()));
+        Map<? extends ExecutableElement, ? extends AnnotationValue> explicit = mirror.getElementValues();
+        if (explicit.isEmpty()) {
+            return rendered.toString();
+        }
+        rendered.append('(');
+        if (explicit.size() == 1) {
+            Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> only =
+                    explicit.entrySet().iterator().next();
+            if (only.getKey().getSimpleName().contentEquals("value")) {
+                rendered.append(renderAnnotationValue(only.getValue()));
+                rendered.append(')');
+                return rendered.toString();
+            }
+        }
+        boolean first = true;
+        for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : explicit.entrySet()) {
+            if (!first) {
+                rendered.append(", ");
+            }
+            first = false;
+            rendered.append(entry.getKey().getSimpleName()).append(" = ")
+                    .append(renderAnnotationValue(entry.getValue()));
+        }
+        rendered.append(')');
+        return rendered.toString();
+    }
+
+    static String renderAnnotationValue(AnnotationValue value) {
+        Object raw = value.getValue();
+        if (raw instanceof String) {
+            return '"' + escapeJava((String) raw) + '"';
+        }
+        if (raw instanceof Character) {
+            return "'" + escapeJava(String.valueOf((Character) raw)) + "'";
+        }
+        if (raw instanceof TypeMirror) {
+            return AssembledProperty.renderType((TypeMirror) raw) + ".class";
+        }
+        if (raw instanceof VariableElement) {
+            VariableElement enumConst = (VariableElement) raw;
+            return enumConst.getEnclosingElement() + "." + enumConst.getSimpleName();
+        }
+        if (raw instanceof AnnotationMirror) {
+            return renderAnnotationMirror((AnnotationMirror) raw);
+        }
+        if (raw instanceof List<?>) {
+            List<?> items = (List<?>) raw;
+            if (items.isEmpty()) {
+                return "{}";
+            }
+            StringBuilder rendered = new StringBuilder("{");
+            for (int i = 0; i < items.size(); i++) {
+                if (i > 0) {
+                    rendered.append(", ");
+                }
+                Object item = items.get(i);
+                if (item instanceof AnnotationValue) {
+                    rendered.append(renderAnnotationValue((AnnotationValue) item));
+                } else {
+                    rendered.append(item);
+                }
+            }
+            rendered.append('}');
+            return rendered.toString();
+        }
+        if (raw instanceof Long) {
+            return raw.toString() + "L";
+        }
+        if (raw instanceof Float) {
+            return raw.toString() + "F";
+        }
+        if (raw instanceof Double) {
+            return raw.toString() + "D";
+        }
+        return String.valueOf(raw);
+    }
+
+    static String renderConstant(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof String) {
+            return '"' + escapeJava((String) value) + '"';
+        }
+        if (value instanceof Character) {
+            return "'" + escapeJava(String.valueOf((Character) value)) + "'";
+        }
+        if (value instanceof Long) {
+            return value.toString() + "L";
+        }
+        if (value instanceof Float) {
+            return value.toString() + "F";
+        }
+        if (value instanceof Double) {
+            return value.toString() + "D";
+        }
+        return String.valueOf(value);
+    }
+
+    static String escapeJava(String value) {
+        StringBuilder escaped = new StringBuilder();
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            switch (c) {
+                case '\\':
+                    escaped.append("\\\\");
+                    break;
+                case '\'':
+                    escaped.append("\\'");
+                    break;
+                case '"':
+                    escaped.append("\\\"");
+                    break;
+                case '\n':
+                    escaped.append("\\n");
+                    break;
+                case '\r':
+                    escaped.append("\\r");
+                    break;
+                case '\t':
+                    escaped.append("\\t");
+                    break;
+                default:
+                    if (c < 32 || c == 127) {
+                        escaped.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        escaped.append(c);
+                    }
+                    break;
+            }
+        }
+        return escaped.toString();
+    }
+
     static final class AssembledProperty {
 
         private final String name;
@@ -449,27 +758,85 @@ final class AssembledProperties {
         private final String initializer;
         private final boolean primitiveBoolean;
         private final boolean array;
+        private final List<String> annotations;
 
         AssembledProperty(
                 String name,
                 String typeSource,
                 String initializer,
                 boolean primitiveBoolean,
-                boolean array) {
+                boolean array,
+                List<String> annotations) {
             this.name = Objects.requireNonNull(name);
             this.typeSource = Objects.requireNonNull(typeSource);
             this.initializer = initializer;
             this.primitiveBoolean = primitiveBoolean;
             this.array = array;
+            this.annotations = Collections.unmodifiableList(new ArrayList<String>(
+                    annotations == null ? Collections.<String>emptyList() : annotations));
         }
 
         static AssembledProperty fromType(String name, TypeMirror type, String initializer) {
+            return fromType(name, type, Collections.<TypeMirror>emptyList(), initializer,
+                    Collections.<String>emptyList());
+        }
+
+        static AssembledProperty fromType(
+                String name,
+                TypeMirror type,
+                List<TypeMirror> typeArgs,
+                String initializer,
+                List<String> annotations) {
+            String rendered = renderType(type);
+            if (typeArgs != null && !typeArgs.isEmpty()) {
+                StringBuilder generic = new StringBuilder(rendered).append('<');
+                for (int i = 0; i < typeArgs.size(); i++) {
+                    if (i > 0) {
+                        generic.append(", ");
+                    }
+                    generic.append(renderType(typeArgs.get(i)));
+                }
+                generic.append('>');
+                rendered = generic.toString();
+            }
             return new AssembledProperty(
                     name,
-                    renderType(type),
+                    rendered,
                     initializer,
                     type.getKind() == TypeKind.BOOLEAN,
-                    type.getKind() == TypeKind.ARRAY);
+                    type.getKind() == TypeKind.ARRAY,
+                    annotations);
+        }
+
+        static AssembledProperty fromSource(
+                String name,
+                String typeSource,
+                String initializer,
+                List<String> annotations) {
+            String trimmed = typeSource.trim();
+            return new AssembledProperty(
+                    name,
+                    trimmed,
+                    initializer,
+                    "boolean".equals(trimmed),
+                    isArrayTypeSource(trimmed),
+                    annotations);
+        }
+
+        static boolean isArrayTypeSource(String typeSource) {
+            return stripTopLevelGenerics(typeSource).endsWith("[]");
+        }
+
+        AssembledProperty mergeWith(AssembledProperty other) {
+            String mergedInitializer = this.initializer != null ? this.initializer : other.initializer;
+            List<String> mergedAnnotations = new ArrayList<String>(this.annotations);
+            for (String annotation : other.annotations) {
+                if (!mergedAnnotations.contains(annotation)) {
+                    mergedAnnotations.add(annotation);
+                }
+            }
+            return new AssembledProperty(
+                    name, typeSource, mergedInitializer, primitiveBoolean, array, mergedAnnotations);
         }
 
         String name() {
@@ -490,6 +857,10 @@ final class AssembledProperties {
 
         boolean array() {
             return array;
+        }
+
+        List<String> annotations() {
+            return annotations;
         }
 
         String getter() {
@@ -527,13 +898,7 @@ final class AssembledProperties {
         }
 
         private static String stripJavaLang(String typeName) {
-            int generic = typeName.indexOf('<');
-            String core = generic < 0 ? typeName : typeName.substring(0, generic);
-            String suffix = generic < 0 ? "" : typeName.substring(generic);
-            if (core.startsWith("java.lang.") && core.indexOf('.', "java.lang.".length()) < 0) {
-                return core.substring("java.lang.".length()) + suffix;
-            }
-            return typeName;
+            return typeName.replaceAll("\\bjava\\.lang\\.([A-Za-z_][A-Za-z0-9_]*)(?![.\\w])", "$1");
         }
     }
 }

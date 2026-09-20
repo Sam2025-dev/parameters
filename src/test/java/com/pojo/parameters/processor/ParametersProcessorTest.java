@@ -402,6 +402,201 @@ class ParametersProcessorTest {
         assertThat(compilation).hadErrorContaining("Invalid @Of property name");
     }
 
+    @Test
+    void ofSupportsListMapDefaultsAndMarkerAnnotations() {
+        JavaFileObject address = JavaFileObjects.forSourceString(
+                "com.example.Address",
+                src(
+                        "package com.example;",
+                        "",
+                        "public class Address {",
+                        "    public String city;",
+                        "}"));
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.RichVO",
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
+                        "import java.util.List;",
+                        "import java.util.Map;",
+                        "",
+                        "@Parameters(of = {",
+                        "        @Of(Class = List.class, typeArgs = {String.class}, names = {\"roles\"},",
+                        "                initializer = \"java.util.Collections.emptyList()\"),",
+                        "        @Of(Class = Map.class, typeArgs = {String.class, Address.class}, names = {\"addresses\"}),",
+                        "        @Of(Class = String.class, names = {\"status\"}, initializer = \"\\\"ACTIVE\\\"\",",
+                        "                annotations = {Deprecated.class})",
+                        "})",
+                        "public class RichVO extends RichVO__Parameters {",
+                        "}"));
+
+        Compilation compilation = compile(address, source);
+        assertThat(compilation).succeeded();
+        com.google.common.truth.StringSubject generated = assertThat(compilation)
+                .generatedSourceFile("com.example.RichVO__Parameters")
+                .contentsAsUtf8String();
+        generated.contains("private java.util.List<String> roles = java.util.Collections.emptyList();");
+        generated.contains("private java.util.Map<String, com.example.Address> addresses;");
+        generated.contains("@Deprecated");
+        generated.contains("private String status = \"ACTIVE\";");
+    }
+
+    @Test
+    void ofSupportsNestedGenericTypeSource() {
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.NestedVO",
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
+                        "",
+                        "@Parameters(of = @Of(",
+                        "        type = \"java.util.List<java.util.Map<String, String>>\",",
+                        "        names = {\"attributes\"}))",
+                        "public class NestedVO extends NestedVO__Parameters {",
+                        "}"));
+
+        Compilation compilation = compile(source);
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("com.example.NestedVO__Parameters")
+                .contentsAsUtf8String()
+                .contains("private java.util.List<java.util.Map<String, String>> attributes;");
+    }
+
+    @Test
+    void ofRejectsTypeArgsArityMismatch() {
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.ArityVO",
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
+                        "import java.util.List;",
+                        "",
+                        "@Parameters(of = @Of(Class = List.class, typeArgs = {String.class, Integer.class}, names = {\"roles\"}))",
+                        "public class ArityVO extends ArityVO__Parameters {",
+                        "}"));
+
+        Compilation compilation = compile(source);
+        assertThat(compilation).failed();
+        assertThat(compilation).hadErrorContaining("expects 1 type argument(s), not 2");
+    }
+
+    @Test
+    void ofRejectsTypeArgsOnNonGenericClass() {
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.RawArgsVO",
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
+                        "",
+                        "@Parameters(of = @Of(Class = String.class, typeArgs = {Integer.class}, names = {\"label\"}))",
+                        "public class RawArgsVO extends RawArgsVO__Parameters {",
+                        "}"));
+
+        Compilation compilation = compile(source);
+        assertThat(compilation).failed();
+        assertThat(compilation).hadErrorContaining("typeArgs can only be used with generic types");
+    }
+
+    @Test
+    void ofRejectsTypeCombinedWithTypeArgs() {
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.CombinedVO",
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
+                        "import java.util.List;",
+                        "",
+                        "@Parameters(of = @Of(Class = List.class, typeArgs = {String.class},",
+                        "        type = \"java.util.List<String>\", names = {\"roles\"}))",
+                        "public class CombinedVO extends CombinedVO__Parameters {",
+                        "}"));
+
+        Compilation compilation = compile(source);
+        assertThat(compilation).failed();
+        assertThat(compilation).hadErrorContaining("@Of type and typeArgs cannot be combined");
+    }
+
+    @Test
+    void ofRequiresClassOrType() {
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.EmptyOfVO",
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
+                        "",
+                        "@Parameters(of = @Of(names = {\"value\"}))",
+                        "public class EmptyOfVO extends EmptyOfVO__Parameters {",
+                        "}"));
+
+        Compilation compilation = compile(source);
+        assertThat(compilation).failed();
+        assertThat(compilation).hadErrorContaining("Each @Of must declare Class or type");
+    }
+
+    @Test
+    void mergesGenericFieldsConstantsAndAnnotations() {
+        JavaFileObject label = JavaFileObjects.forSourceString(
+                "com.example.Label",
+                src(
+                        "package com.example;",
+                        "",
+                        "import java.lang.annotation.ElementType;",
+                        "import java.lang.annotation.Retention;",
+                        "import java.lang.annotation.RetentionPolicy;",
+                        "import java.lang.annotation.Target;",
+                        "",
+                        "@Target(ElementType.FIELD)",
+                        "@Retention(RetentionPolicy.SOURCE)",
+                        "public @interface Label {",
+                        "    String value();",
+                        "    int max() default 0;",
+                        "}"));
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.FieldVO",
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "import java.util.List;",
+                        "import java.util.Map;",
+                        "",
+                        "@Parameters",
+                        "public class FieldVO extends FieldVO__Parameters {",
+                        "    @Label(value = \"n\", max = 32)",
+                        "    private String userName;",
+                        "    private int countryCode = 86;",
+                        "    private String status = \"ACTIVE\";",
+                        "    private List<String> roles;",
+                        "    private Map<String, Integer> counts;",
+                        "}"));
+
+        Compilation compilation = compile(label, source);
+        assertThat(compilation).succeeded();
+        com.google.common.truth.StringSubject generated = assertThat(compilation)
+                .generatedSourceFile("com.example.FieldVO__Parameters")
+                .contentsAsUtf8String();
+        generated.contains("@com.example.Label(value = \"n\", max = 32)");
+        generated.contains("private String userName;");
+        generated.contains("private int countryCode = 86;");
+        generated.contains("private String status = \"ACTIVE\";");
+        generated.contains("private java.util.List<String> roles;");
+        generated.contains("private java.util.Map<String,");
+        generated.contains("counts;");
+    }
+
     private static Compilation compile(JavaFileObject... sources) {
         return javac()
                 .withProcessors(new ParametersProcessor())
