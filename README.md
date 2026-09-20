@@ -48,6 +48,33 @@ GitHub Packages requires a token even for a public package. In `~/.m2/settings.x
 The PAT needs at least `read:packages`. Package page:
 https://github.com/Sam2025-dev/parameters/packages/3259824
 
+## Maven Central
+
+Maven Central cannot host `com.github.parameters` unless that DNS namespace is verified.
+Signing in to [Central Portal](https://central.sonatype.com/) with GitHub grants
+`io.github.sam2025-dev`. After a `v0.1` release, consumers can use Central with
+no extra repository:
+
+```xml
+<dependency>
+    <groupId>io.github.sam2025-dev</groupId>
+    <artifactId>parameters</artifactId>
+    <version>0.1</version>
+</dependency>
+```
+
+Publishing to Central needs these GitHub Actions secrets:
+
+| Secret | Value |
+| --- | --- |
+| `CENTRAL_USERNAME` | User token username from https://central.sonatype.com/account |
+| `CENTRAL_PASSWORD` | User token password |
+| `GPG_PRIVATE_KEY` | Exported secret key (`gpg --armor --export-secret-keys`) |
+| `GPG_PASSPHRASE` | Passphrase for that key |
+
+Upload the matching public key to a keyserver (for example https://keys.openpgp.org).
+Then tag `v0.1` or run the **Publish** workflow manually.
+
 Register it as an annotation processor next to Lombok:
 
 ```xml
