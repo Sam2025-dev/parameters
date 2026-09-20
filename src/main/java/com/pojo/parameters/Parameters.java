@@ -51,18 +51,12 @@ public @interface Parameters {
     /**
      * Annotation types stripped from every generated field after merge,
      * including mirrors copied from member variables. Matches by type, so
-     * {@code Size.class} removes {@code @Size(min = 1)}. Applied after
-     * {@link Of#annotations()} and {@link Of#removeAnnot()}.
+     * {@code Size.class} removes {@code @Size(min = 1)}.
      */
     Class<? extends Annotation>[] removeAnnot() default {};
 
-    /**
-     * Declares a property on {@link Parameters#of()}, or place it on a model
-     * field to add {@link #annotations()} or drop copied field annotations with
-     * {@link #removeAnnot()}.
-     */
     @Documented
-    @Target(ElementType.FIELD)
+    @Target({})
     @Retention(RetentionPolicy.SOURCE)
     public @interface Of {
 
@@ -94,21 +88,5 @@ public @interface Parameters {
          * {@code "\"ACTIVE\""}, or {@code "java.util.Collections.emptyList()"}.
          */
         String initializer() default "";
-
-        /**
-         * Marker (or all-defaults) annotations copied onto the generated field.
-         * Annotations that need attributes should be declared on an instance field;
-         * those mirrors are copied onto the generated field as well.
-         */
-        Class<? extends Annotation>[] annotations() default {};
-
-        /**
-         * Annotation types stripped from the generated field after merge. Matches by
-         * type, so {@code Size.class} removes {@code @Size(min = 1)} copied from the
-         * model field. Place {@code @Of} on that field, or list the field in
-         * {@code @Parameters.of}. Applied after {@link #annotations()} on the same
-         * {@code @Of}.
-         */
-        Class<? extends Annotation>[] removeAnnot() default {};
     }
 }

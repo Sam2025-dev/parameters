@@ -5,8 +5,7 @@ Compile-time `@Parameters` for PO/VO classes. Compatible with Lombok and Java 8.
 Place `@Parameters` on a class and extend the generated `<SimpleName>__Parameters`
 superclass. The processor assembles annotation properties and existing instance
 fields into that superclass with JavaBean accessors, `equals`, `hashCode`, and
-`toString`. `@Of` can also be placed on an instance field to add or remove
-annotations for that member.
+`toString`.
 
 Published on GitHub Packages as `com.github.parameters:parameters:0.1-SNAPSHOT`.
 
@@ -112,9 +111,8 @@ When `@Of` omits `names`, the field is the decapitalized simple class name
 `@Parameters.removeAnnot` strips annotation types from every generated field
 after merge, including copies from member variables.
 
-`@Of` is also how defaults, field annotations, `List`/`Map`, and generics are
-declared. Class literals erase type arguments, so those cases need the extra
-members below.
+`@Of` is also how defaults, `List`/`Map`, and generics are declared. Class
+literals erase type arguments, so those cases need the extra members below.
 
 | `@Of` member | Role |
 | --- | --- |
@@ -123,8 +121,6 @@ members below.
 | `type` | Full type source when class literals cannot write nested generics |
 | `names` | One or more field names; derived from the type when omitted |
 | `initializer` | Java expression copied onto the generated field |
-| `annotations` | Marker (or all-defaults) annotations copied onto the generated field |
-| `removeAnnot` | Annotation types stripped from the generated field, including copies from a model field |
 
 `Class` and `type` are alternatives. `type` and `typeArgs` cannot be combined:
 put nested generics in `type`.
@@ -166,8 +162,8 @@ Lombok annotations on the subclass keep working. Use
 `@EqualsAndHashCode(callSuper = true)` and `@ToString(callSuper = true)` if
 Lombok should include the assembled properties.
 
-Shorthand members (`String`, `int_`, …) only supply names and types. Defaults,
-annotations, and generic collections go on `@Of`, as in the next sections.
+Shorthand members (`String`, `int_`, …) only supply names and types. Defaults
+and generic collections go on `@Of`, as in the next sections.
 
 ## Defaults
 
@@ -208,31 +204,15 @@ assign defaults in a subclass constructor after generation.
 
 ## Annotations
 
-Marker annotations (and annotations whose members all have defaults) can be
-listed on `@Of`:
-
-```java
-@Of(Class = String.class, names = {"userName"}, annotations = {Deprecated.class})
-```
-
-That becomes `@Deprecated private String userName;` on the generated
-superclass. Bean Validation or Jackson markers work the same way when those
-types are on the compile classpath:
-
-```java
-@Of(Class = String.class, names = {"email"}, annotations = {NotNull.class, Email.class})
-```
-
-Annotations that need attributes (`@Size(min = 1)`, `@JsonProperty("user_name")`)
-cannot be expressed with `Class[]`. Declare the field on the model class; the
-processor copies field annotation mirrors—including member values—onto the
-generated field:
+Declare annotations on the model field. The processor copies those mirrors—
+including member values—onto the generated field:
 
 ```java
 @Parameters
 public class UserVO extends UserVO__Parameters {
     @Size(min = 1, max = 32)
     @JsonProperty("user_name")
+    @Deprecated
     private String userName;
 }
 ```
@@ -241,9 +221,8 @@ Lombok annotations are not copied. Prefer declaring properties on `@Parameters`
 when the class also uses `@Data`, so accessors live on the generated superclass
 instead of a second field on the subclass.
 
-`removeAnnot` drops copied (or `@Of`) annotations by type, including mirrors
-that have attributes. On `@Parameters` it applies to every generated field,
-which is the usual way to strip annotations copied from member variables:
+`@Parameters.removeAnnot` drops copied annotations by type, including mirrors
+that have attributes. It applies to every generated field:
 
 ```java
 @Parameters(removeAnnot = {Deprecated.class, Size.class})
@@ -258,35 +237,6 @@ public class UserVO extends UserVO__Parameters {
 The generated field keeps `@JsonProperty("user_name")` and drops `@Deprecated`
 and `@Size`. `Size.class` matches `@Size(min = 1, max = 32)` because removal
 is by annotation type, not the exact mirror text.
-
-Per-field removal still works on `@Of` (on the member, or in `@Parameters.of`).
-It runs after merge, so it wins over both the model field and `annotations`
-on the same `@Of`:
-
-```java
-@Parameters
-public class UserVO extends UserVO__Parameters {
-    @Size(min = 1, max = 32)
-    @JsonProperty("user_name")
-    @Deprecated
-    @Of(removeAnnot = {Deprecated.class, Size.class})
-    private String userName;
-}
-```
-
-```java
-@Parameters(
-    of = @Of(
-        names = {"userName"},
-        annotations = {Deprecated.class},
-        removeAnnot = {Size.class})
-)
-public class UserVO extends UserVO__Parameters {
-    @Size(min = 1, max = 32)
-    @JsonProperty("user_name")
-    private String userName;
-}
-```
 
 ## Collections, maps, and generics
 
@@ -354,15 +304,12 @@ import java.util.Map;
             names = {"addresses"}),
         @Of(
             type = "java.util.List<java.util.Map<String, String>>",
-            names = {"attributes"}),
-        @Of(
-            Class = String.class,
-            names = {"status"},
-            initializer = "\"ACTIVE\"",
-            annotations = {Deprecated.class})
+            names = {"attributes"})
     }
 )
 public class ProfileVO extends ProfileVO__Parameters {
+    @Deprecated
+    private String status = "ACTIVE";
 }
 ```
 

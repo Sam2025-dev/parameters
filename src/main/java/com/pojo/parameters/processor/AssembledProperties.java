@@ -59,7 +59,7 @@ final class AssembledProperties {
             BiConsumer<Element, String> error) {
         Map<String, AssembledProperty> byName = new LinkedHashMap<String, AssembledProperty>();
 
-        if (!mergeExistingFields(type, elements, fieldInitializer, byName, error)) {
+        if (!mergeExistingFields(type, fieldInitializer, byName, error)) {
             return null;
         }
         if (!addNamedProperties(type, annotation.String(), "String", false, byName, error)) {
@@ -171,7 +171,6 @@ final class AssembledProperties {
 
     private static boolean mergeExistingFields(
             TypeElement type,
-            Elements elements,
             Function<VariableElement, String> fieldInitializer,
             Map<String, AssembledProperty> byName,
             BiConsumer<Element, String> error) {
@@ -188,27 +187,15 @@ final class AssembledProperties {
                 error.accept(field, "Cannot merge field into @Parameters: invalid name " + name);
                 return false;
             }
-            List<String> annotations = renderFieldAnnotations(field);
-            List<String> removedAnnotations = new ArrayList<String>();
-            AnnotationMirror fieldOf = ofMirror(field);
-            if (fieldOf != null) {
-                if (!addOfAnnotationMarkers(type, fieldOf, elements, annotations, error)) {
-                    return false;
-                }
-                if (!addOfRemovedAnnotations(type, fieldOf, elements, removedAnnotations, error)) {
-                    return false;
-                }
-            }
             AssembledProperty property = AssembledProperty.fromType(
                     name,
                     field.asType(),
                     Collections.<TypeMirror>emptyList(),
                     fieldInitializer.apply(field),
-                    annotations);
+                    renderFieldAnnotations(field));
             if (!putMerged(type, byName, property, error)) {
                 return false;
             }
-            applyRemovedAnnotations(byName, name, removedAnnotations);
         }
         return true;
     }
@@ -226,24 +213,11 @@ final class AssembledProperties {
             TypeMirror propertyType = classValue(nested, elements, "Class");
             boolean classSpecified = propertyType != null && propertyType.getKind() != TypeKind.VOID;
             String typeOverride = optionalString(nested, elements, "type");
-            List<TypeMirror> typeArgs = classValues(nested, elements, "typeArgs");
-            String initializer = optionalString(nested, elements, "initializer");
-            List<String> annotations = new ArrayList<String>();
-            if (!addOfAnnotationMarkers(type, nested, elements, annotations, error)) {
-                return false;
-            }
-            List<String> removedAnnotations = new ArrayList<String>();
-            if (!addOfRemovedAnnotations(type, nested, elements, removedAnnotations, error)) {
-                return false;
-            }
-            List<String> names = stringValues(nested, elements, "names");
             if (!classSpecified && typeOverride == null) {
-                if (!updateExistingOfProperties(
-                        type, names, typeArgs, initializer, annotations, removedAnnotations, byName, error)) {
-                    return false;
-                }
-                continue;
+                error.accept(type, "Each @Of must declare Class or type.");
+                return false;
             }
+            List<TypeMirror> typeArgs = classValues(nested, elements, "typeArgs");
             if (typeOverride != null && !typeArgs.isEmpty()) {
                 error.accept(type, "@Of type and typeArgs cannot be combined; put nested generics in type.");
                 return false;
@@ -270,6 +244,8 @@ final class AssembledProperties {
                     }
                 }
             }
+            String initializer = optionalString(nested, elements, "initializer");
+            List<String> names = stringValues(nested, elements, "names");
             if (names.isEmpty()) {
                 String derived = typeOverride != null
                         ? decapitalize(simpleNameFromSource(typeOverride))
@@ -288,58 +264,14 @@ final class AssembledProperties {
                     return false;
                 }
                 AssembledProperty property = typeOverride != null
-                        ? AssembledProperty.fromSource(name, typeOverride, initializer, annotations)
-                        : AssembledProperty.fromType(name, propertyType, typeArgs, initializer, annotations);
+                        ? AssembledProperty.fromSource(
+                                name, typeOverride, initializer, Collections.<String>emptyList())
+                        : AssembledProperty.fromType(
+                                name, propertyType, typeArgs, initializer, Collections.<String>emptyList());
                 if (!putMerged(type, byName, property, error)) {
                     return false;
                 }
-                applyRemovedAnnotations(byName, name, removedAnnotations);
             }
-        }
-        return true;
-    }
-
-    private static boolean updateExistingOfProperties(
-            TypeElement type,
-            List<String> names,
-            List<TypeMirror> typeArgs,
-            String initializer,
-            List<String> annotations,
-            List<String> removedAnnotations,
-            Map<String, AssembledProperty> byName,
-            BiConsumer<Element, String> error) {
-        if (!typeArgs.isEmpty()) {
-            error.accept(type, "@Of typeArgs requires Class.");
-            return false;
-        }
-        boolean hasUpdate = initializer != null || !annotations.isEmpty() || !removedAnnotations.isEmpty();
-        if (names.isEmpty() || !hasUpdate) {
-            error.accept(type, "Each @Of must declare Class or type.");
-            return false;
-        }
-        for (String name : names) {
-            if (!SourceVersion.isIdentifier(name) || SourceVersion.isKeyword(name)) {
-                error.accept(type, "Invalid @Of property name: " + name);
-                return false;
-            }
-            AssembledProperty existing = byName.get(name);
-            if (existing == null) {
-                error.accept(type, "@Of without Class or type can only update existing properties: " + name);
-                return false;
-            }
-            if (initializer != null || !annotations.isEmpty()) {
-                AssembledProperty patch = new AssembledProperty(
-                        name,
-                        existing.typeSource(),
-                        initializer,
-                        existing.primitiveBoolean(),
-                        existing.array(),
-                        annotations);
-                if (!putMerged(type, byName, patch, error)) {
-                    return false;
-                }
-            }
-            applyRemovedAnnotations(byName, name, removedAnnotations);
         }
         return true;
     }
@@ -355,42 +287,6 @@ final class AssembledProperties {
         if (property != null) {
             byName.put(name, property.withoutAnnotationTypes(removedAnnotations));
         }
-    }
-
-    private static AnnotationMirror ofMirror(VariableElement field) {
-        for (AnnotationMirror mirror : field.getAnnotationMirrors()) {
-            Element annotationElement = mirror.getAnnotationType().asElement();
-            if (annotationElement instanceof TypeElement
-                    && ((TypeElement) annotationElement).getQualifiedName()
-                    .contentEquals("com.pojo.parameters.Parameters.Of")) {
-                return mirror;
-            }
-        }
-        return null;
-    }
-
-    private static boolean addOfAnnotationMarkers(
-            TypeElement type,
-            AnnotationMirror nested,
-            Elements elements,
-            List<String> annotations,
-            BiConsumer<Element, String> error) {
-        for (TypeMirror annotationType : classValues(nested, elements, "annotations")) {
-            if (annotationType.getKind() != TypeKind.DECLARED) {
-                error.accept(type, "@Of annotations must be annotation types: " + annotationType);
-                return false;
-            }
-            Element annotationElement = ((DeclaredType) annotationType).asElement();
-            if (annotationElement.getKind() != ElementKind.ANNOTATION_TYPE) {
-                error.accept(type, "@Of annotations must be annotation types: " + annotationType);
-                return false;
-            }
-            String rendered = "@" + AssembledProperty.renderType(annotationType);
-            if (!annotations.contains(rendered)) {
-                annotations.add(rendered);
-            }
-        }
-        return true;
     }
 
     private static boolean applyParametersRemoveAnnot(
@@ -414,16 +310,6 @@ final class AssembledProperties {
             applyRemovedAnnotations(byName, name, removedAnnotations);
         }
         return true;
-    }
-
-    private static boolean addOfRemovedAnnotations(
-            TypeElement type,
-            AnnotationMirror nested,
-            Elements elements,
-            List<String> removedAnnotations,
-            BiConsumer<Element, String> error) {
-        return collectRemovedAnnotations(
-                type, nested, elements, "@Of removeAnnot", removedAnnotations, error);
     }
 
     private static boolean collectRemovedAnnotations(

@@ -33,13 +33,10 @@ import java.util.Map;
                         names = {"addresses"}),
                 @Of(
                         type = "java.util.List<java.util.Map<String, String>>",
-                        names = {"attributes"}),
-                @Of(
-                        Class = String.class,
-                        names = {"status"},
-                        initializer = "\"ACTIVE\"",
-                        annotations = {Deprecated.class})
+                        names = {"attributes"})
         }
 )
 public class ProfileVO extends ProfileVO__Parameters {
+    @Deprecated
+    private String status = "ACTIVE";
 }
