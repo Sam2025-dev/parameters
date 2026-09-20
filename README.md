@@ -7,7 +7,7 @@ superclass. The processor assembles annotation properties and existing instance
 fields into that superclass with JavaBean accessors, `equals`, `hashCode`, and
 `toString`.
 
-Artifact: `com.github.parameters:parameters:0.1-SNAPSHOT`
+Published on GitHub Packages as `com.github.parameters:parameters:0.1-SNAPSHOT`.
 
 ```xml
 <dependency>
@@ -16,6 +16,37 @@ Artifact: `com.github.parameters:parameters:0.1-SNAPSHOT`
     <version>0.1-SNAPSHOT</version>
 </dependency>
 ```
+
+Add the GitHub Packages repository (snapshots must be enabled):
+
+```xml
+<repositories>
+    <repository>
+        <id>github</id>
+        <url>https://maven.pkg.github.com/Sam2025-dev/parameters</url>
+        <snapshots>
+            <enabled>true</enabled>
+        </snapshots>
+    </repository>
+</repositories>
+```
+
+GitHub Packages requires a token even for a public package. In `~/.m2/settings.xml` the `<id>` must match `github`:
+
+```xml
+<settings>
+    <servers>
+        <server>
+            <id>github</id>
+            <username>YOUR_GITHUB_USERNAME</username>
+            <password>YOUR_GITHUB_PAT</password>
+        </server>
+    </servers>
+</settings>
+```
+
+The PAT needs at least `read:packages`. Package page:
+https://github.com/Sam2025-dev/parameters/packages/3259824
 
 Register it as an annotation processor next to Lombok:
 

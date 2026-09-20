@@ -8,7 +8,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
     steps:
       - uses: actions/checkout@v4
@@ -22,5 +22,27 @@ jobs:
           server-password: GITHUB_TOKEN
       - name: Publish to GitHub Packages
         run: mvn -B -DskipTests deploy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Attach JAR to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v0.1-SNAPSHOT
+          name: 0.1-SNAPSHOT
+          target_commitish: ${{ github.sha }}
+          files: target/parameters-0.1-SNAPSHOT.jar
+          body: |
+            Maven (GitHub Packages):
+
+            ```xml
+            <dependency>
+                <groupId>com.github.parameters</groupId>
+                <artifactId>parameters</artifactId>
+                <version>0.1-SNAPSHOT</version>
+            </dependency>
+            ```
+
+            Repository: `https://maven.pkg.github.com/Sam2025-dev/parameters`
+          make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
