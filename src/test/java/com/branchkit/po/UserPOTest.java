@@ -90,6 +90,7 @@ class UserPOTest {
         assertEquals(Address.class, generated.getDeclaredField("homeAddress").getType());
         assertEquals(boolean.class, generated.getDeclaredField("active").getType());
         assertEquals(long.class, generated.getDeclaredField("age").getType());
+        assertTrue(java.io.Serializable.class.isAssignableFrom(generated));
     }
 
     @Test

@@ -5,7 +5,8 @@ Compile-time `@Parameters` for PO/VO classes. Compatible with Lombok and Java 8.
 Place `@Parameters` on a class and extend the generated `<SimpleName>__Parameters`
 superclass. The processor assembles annotation properties and existing instance
 fields into that superclass with JavaBean accessors, `equals`, `hashCode`, and
-`toString`.
+`toString`. The generated type can itself extend a class and implement interfaces
+via `Extends` and `Implements`.
 
 Published on GitHub Packages as `com.github.parameters:parameters:0.1-SNAPSHOT`.
 
@@ -110,6 +111,18 @@ When `@Of` omits `names`, the field is the decapitalized simple class name
 
 `@Parameters.removeAnnot` strips annotation types from every generated field
 after merge, including copies from member variables.
+
+The generated superclass can extend another class and implement interfaces:
+
+| Member | Role |
+| --- | --- |
+| `Extends` | Superclass of `<SimpleName>__Parameters` (`void.class` means none) |
+| `Implements` | Interfaces implemented by `<SimpleName>__Parameters` |
+
+`Extends` must be a non-final class with an accessible no-arg constructor.
+`Implements` must be interfaces. Generated getters and setters can satisfy those
+contracts. `equals` / `hashCode` / `toString` call `super` only when that
+superclass already overrides them.
 
 `@Of` is also how defaults, `List`/`Map`, and generics are declared. Class
 literals erase type arguments, so those cases need the extra members below.
@@ -237,6 +250,36 @@ public class UserVO extends UserVO__Parameters {
 The generated field keeps `@JsonProperty("user_name")` and drops `@Deprecated`
 and `@Size`. `Size.class` matches `@Size(min = 1, max = 32)` because removal
 is by annotation type, not the exact mirror text.
+
+## Superclass and interfaces
+
+Java allows only one superclass, so an annotated type cannot both extend
+`<SimpleName>__Parameters` and another domain class. Put that parent and any
+interfaces on `@Parameters` instead; they are copied onto the generated type:
+
+```java
+@Parameters(
+    String = {"userName"},
+    Extends = BaseEntity.class,
+    Implements = {Named.class, Serializable.class}
+)
+public class StaffVO extends StaffVO__Parameters {
+}
+```
+
+This generates:
+
+```java
+public abstract class StaffVO__Parameters
+        extends BaseEntity
+        implements Named, Serializable {
+    private String userName;
+    // getters, setters, equals, hashCode, toString
+}
+```
+
+`StaffVO` is then a `BaseEntity` and a `Named`. If `Named` declares
+`getUserName` / `setUserName`, the generated accessors fulfill the contract.
 
 ## Collections, maps, and generics
 

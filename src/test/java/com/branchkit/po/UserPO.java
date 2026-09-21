@@ -14,7 +14,8 @@ import java.io.Serializable;
  *
  * <p>Instance-level user attributes are declared on {@link Parameters} and merged
  * into the generated superclass together with extra primitive and custom-typed
- * properties.
+ * properties. {@code Serializable} is implemented by that generated type via
+ * {@link Parameters#Implements()}.
  */
 @Data
 @NoArgsConstructor
@@ -33,9 +34,10 @@ import java.io.Serializable;
         double_ = {"amount"},
         of = {
                 @Of(Class = Address.class, names = {"homeAddress"})
-        }
+        },
+        Implements = {Serializable.class}
 )
-public class UserPO extends UserPO__Parameters implements Serializable {
+public class UserPO extends UserPO__Parameters {
 
     private static final long serialVersionUID = 1L;
 
