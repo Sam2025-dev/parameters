@@ -416,7 +416,8 @@ final class AssembledProperties {
             return false;
         }
         NestingKind nesting = superType.getNestingKind();
-        if (nesting == NestingKind.INNER || nesting == NestingKind.ANONYMOUS || nesting == NestingKind.LOCAL) {
+        if (nesting == NestingKind.ANONYMOUS || nesting == NestingKind.LOCAL
+                || (nesting == NestingKind.MEMBER && !superType.getModifiers().contains(Modifier.STATIC))) {
             error.accept(type, "@Parameters Extends cannot be an inner class: " + superType.getQualifiedName());
             return false;
         }
