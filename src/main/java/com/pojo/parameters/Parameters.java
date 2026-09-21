@@ -55,6 +55,19 @@ public @interface Parameters {
      */
     Class<? extends Annotation>[] removeAnnot() default {};
 
+    /**
+     * Superclass of the generated {@code <SimpleName>__Parameters} type.
+     * {@code void.class} (the default) means no {@code extends} clause.
+     * Must be a non-final class with an accessible no-arg constructor.
+     */
+    Class<?> Extends() default void.class;
+
+    /**
+     * Interfaces implemented by the generated {@code <SimpleName>__Parameters} type.
+     * Generated getters and setters can satisfy those contracts.
+     */
+    Class<?>[] Implements() default {};
+
     @Documented
     @Target({})
     @Retention(RetentionPolicy.SOURCE)
