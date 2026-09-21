@@ -641,6 +641,191 @@ class ParametersProcessorTest {
         generated.contains("counts;");
     }
 
+    @Test
+    void generatesSuperclassThatExtendsAndImplements() {
+        JavaFileObject base = JavaFileObjects.forSourceString(
+                "com.example.BaseEntity",
+                src(
+                        "package com.example;",
+                        "",
+                        "public abstract class BaseEntity {",
+                        "    private Long version;",
+                        "    public Long getVersion() { return version; }",
+                        "    public void setVersion(Long version) { this.version = version; }",
+                        "}"));
+        JavaFileObject named = JavaFileObjects.forSourceString(
+                "com.example.Named",
+                src(
+                        "package com.example;",
+                        "",
+                        "public interface Named {",
+                        "    String getUserName();",
+                        "    void setUserName(String userName);",
+                        "}"));
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.StaffVO",
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "import java.io.Serializable;",
+                        "",
+                        "@Parameters(",
+                        "        String = {\"userName\"},",
+                        "        Extends = BaseEntity.class,",
+                        "        Implements = {Named.class, Serializable.class})",
+                        "public class StaffVO extends StaffVO__Parameters {",
+                        "}"));
+
+        Compilation compilation = compile(base, named, source);
+        assertThat(compilation).succeeded();
+        com.google.common.truth.StringSubject generated = assertThat(compilation)
+                .generatedSourceFile("com.example.StaffVO__Parameters")
+                .contentsAsUtf8String();
+        generated.contains("public abstract class StaffVO__Parameters extends com.example.BaseEntity implements com.example.Named, java.io.Serializable {");
+        generated.contains("private String userName;");
+        generated.contains("public String getUserName()");
+        generated.doesNotContain("super.equals");
+        generated.doesNotContain("super.hashCode");
+        generated.doesNotContain("super.toString");
+    }
+
+    @Test
+    void callsSuperWhenExtendedClassOverridesEqualsHashCodeAndToString() {
+        JavaFileObject base = JavaFileObjects.forSourceString(
+                "com.example.Counted",
+                src(
+                        "package com.example;",
+                        "",
+                        "public abstract class Counted {",
+                        "    @Override public boolean equals(Object o) { return super.equals(o); }",
+                        "    @Override public int hashCode() { return super.hashCode(); }",
+                        "    @Override public String toString() { return \"Counted\"; }",
+                        "}"));
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.CountedVO",
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "",
+                        "@Parameters(String = {\"label\"}, Extends = Counted.class)",
+                        "public class CountedVO extends CountedVO__Parameters {",
+                        "}"));
+
+        Compilation compilation = compile(base, source);
+        assertThat(compilation).succeeded();
+        com.google.common.truth.StringSubject generated = assertThat(compilation)
+                .generatedSourceFile("com.example.CountedVO__Parameters")
+                .contentsAsUtf8String();
+        generated.contains("extends com.example.Counted {");
+        generated.contains("if (!super.equals(o))");
+        generated.contains("return 31 * super.hashCode() + ");
+        generated.contains("super=\" + super.toString()");
+    }
+
+    @Test
+    void omitsExtendsClauseWhenObject() {
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.ObjVO",
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "",
+                        "@Parameters(String = {\"label\"}, Extends = Object.class)",
+                        "public class ObjVO extends ObjVO__Parameters {",
+                        "}"));
+
+        Compilation compilation = compile(source);
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("com.example.ObjVO__Parameters")
+                .contentsAsUtf8String()
+                .contains("public abstract class ObjVO__Parameters {");
+    }
+
+    @Test
+    void rejectsExtendsOnInterface() {
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.IfaceVO",
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "",
+                        "@Parameters(String = {\"label\"}, Extends = Runnable.class)",
+                        "public class IfaceVO extends IfaceVO__Parameters {",
+                        "}"));
+
+        Compilation compilation = compile(source);
+        assertThat(compilation).failed();
+        assertThat(compilation).hadErrorContaining("Extends must be a class");
+    }
+
+    @Test
+    void rejectsImplementsOnClass() {
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.ClassIfaceVO",
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "",
+                        "@Parameters(String = {\"label\"}, Implements = String.class)",
+                        "public class ClassIfaceVO extends ClassIfaceVO__Parameters {",
+                        "}"));
+
+        Compilation compilation = compile(source);
+        assertThat(compilation).failed();
+        assertThat(compilation).hadErrorContaining("Implements must be interfaces");
+    }
+
+    @Test
+    void rejectsFinalExtends() {
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.FinalVO",
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "",
+                        "@Parameters(String = {\"label\"}, Extends = String.class)",
+                        "public class FinalVO extends FinalVO__Parameters {",
+                        "}"));
+
+        Compilation compilation = compile(source);
+        assertThat(compilation).failed();
+        assertThat(compilation).hadErrorContaining("cannot extend a final class");
+    }
+
+    @Test
+    void rejectsExtendsWithoutNoArgConstructor() {
+        JavaFileObject base = JavaFileObjects.forSourceString(
+                "com.example.NeedsArg",
+                src(
+                        "package com.example;",
+                        "",
+                        "public class NeedsArg {",
+                        "    public NeedsArg(String id) {",
+                        "    }",
+                        "}"));
+        JavaFileObject source = JavaFileObjects.forSourceString(
+                "com.example.NeedsArgVO",
+                src(
+                        "package com.example;",
+                        "",
+                        "import com.pojo.parameters.Parameters;",
+                        "",
+                        "@Parameters(String = {\"label\"}, Extends = NeedsArg.class)",
+                        "public class NeedsArgVO extends NeedsArgVO__Parameters {",
+                        "}"));
+
+        Compilation compilation = compile(base, source);
+        assertThat(compilation).failed();
+        assertThat(compilation).hadErrorContaining("accessible no-arg constructor");
+    }
+
     private static Compilation compile(JavaFileObject... sources) {
         return javac()
                 .withProcessors(new ParametersProcessor())

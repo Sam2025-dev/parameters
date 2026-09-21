@@ -29,6 +29,8 @@ import java.util.Set;
 
 /**
  * Assembles {@link Parameters} fields into a generated superclass at compile time.
+ * That superclass may extend {@link Parameters#Extends()} and implement
+ * {@link Parameters#Implements()}.
  */
 @SupportedAnnotationTypes("com.pojo.parameters.Parameters")
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
