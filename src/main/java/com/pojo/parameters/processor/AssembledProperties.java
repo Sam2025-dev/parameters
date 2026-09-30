@@ -1,7 +1,5 @@
 package com.pojo.parameters.processor;
 
-import com.pojo.parameters.Parameters;
-
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
@@ -73,7 +71,6 @@ final class AssembledProperties {
 
     static AssembledProperties from(
             TypeElement type,
-            Parameters annotation,
             AnnotationMirror mirror,
             Elements elements,
             Function<VariableElement, String> fieldInitializer,
@@ -81,57 +78,6 @@ final class AssembledProperties {
         Map<String, AssembledProperty> byName = new LinkedHashMap<String, AssembledProperty>();
 
         if (!mergeExistingFields(type, fieldInitializer, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.String(), "String", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.Boolean(), "Boolean", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.Byte(), "Byte", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.Short(), "Short", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.Integer(), "Integer", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.Long(), "Long", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.Character(), "Character", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.Float(), "Float", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.Double(), "Double", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.boolean_(), "boolean", true, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.byte_(), "byte", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.short_(), "short", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.int_(), "int", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.long_(), "long", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.char_(), "char", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.float_(), "float", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.double_(), "double", false, byName, error)) {
             return null;
         }
         if (!addOfProperties(type, mirror, elements, byName, error)) {
@@ -548,28 +494,6 @@ final class AssembledProperties {
             String rendered = AssembledProperty.renderType(annotationType);
             if (!removedAnnotations.contains(rendered)) {
                 removedAnnotations.add(rendered);
-            }
-        }
-        return true;
-    }
-
-    private static boolean addNamedProperties(
-            TypeElement type,
-            String[] names,
-            String typeSource,
-            boolean primitiveBoolean,
-            Map<String, AssembledProperty> byName,
-            BiConsumer<Element, String> error) {
-        for (int i = 0; i < names.length; i++) {
-            String name = names[i];
-            if (!SourceVersion.isIdentifier(name) || SourceVersion.isKeyword(name)) {
-                error.accept(type, "Invalid " + typeSource + " property name: " + name);
-                return false;
-            }
-            AssembledProperty property = new AssembledProperty(
-                    name, typeSource, null, primitiveBoolean, false, Collections.<String>emptyList());
-            if (!putMerged(type, byName, property, error)) {
-                return false;
             }
         }
         return true;

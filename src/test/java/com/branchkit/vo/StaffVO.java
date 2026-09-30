@@ -1,6 +1,7 @@
 package com.branchkit.vo;
 
 import com.pojo.parameters.Parameters;
+import com.pojo.parameters.Parameters.Of;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
@@ -15,7 +16,7 @@ import java.io.Serializable;
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 @Parameters(
-        String = {"userName", "title"},
+        of = @Of(Class = String.class, names = {"userName", "title"}),
         Extends = BaseVO.class,
         Implements = {Named.class, Serializable.class}
 )

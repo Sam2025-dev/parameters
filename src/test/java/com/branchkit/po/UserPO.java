@@ -22,17 +22,17 @@ import java.io.Serializable;
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 @Parameters(
-        String = {"userName", "name", "address", "phone"},
-        Long = {"id"},
-        boolean_ = {"active"},
-        byte_ = {"level"},
-        short_ = {"rank"},
-        int_ = {"countryCode", "cityCode", "areaCode"},
-        long_ = {"age"},
-        char_ = {"grade"},
-        float_ = {"score"},
-        double_ = {"amount"},
         of = {
+                @Of(Class = String.class, names = {"userName", "name", "address", "phone"}),
+                @Of(Class = Long.class, names = {"id"}),
+                @Of(Class = boolean.class, names = {"active"}),
+                @Of(Class = byte.class, names = {"level"}),
+                @Of(Class = short.class, names = {"rank"}),
+                @Of(Class = int.class, names = {"countryCode", "cityCode", "areaCode"}),
+                @Of(Class = long.class, names = {"age"}),
+                @Of(Class = char.class, names = {"grade"}),
+                @Of(Class = float.class, names = {"score"}),
+                @Of(Class = double.class, names = {"amount"}),
                 @Of(Class = Address.class, names = {"homeAddress"})
         },
         Implements = {Serializable.class}

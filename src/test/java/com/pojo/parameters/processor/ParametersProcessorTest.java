@@ -19,8 +19,12 @@ class ParametersProcessorTest {
                         "package com.example;",
                         "",
                         "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
                         "",
-                        "@Parameters(String = {\"userName\"}, int_ = {\"countryCode\", \"cityCode\", \"areaCode\"})",
+                        "@Parameters(of = {",
+                        "        @Of(Class = String.class, names = {\"userName\"}),",
+                        "        @Of(Class = int.class, names = {\"countryCode\", \"cityCode\", \"areaCode\"})",
+                        "})",
                         "public class DemoVO extends DemoVO__Parameters {",
                         "}"));
 
@@ -58,7 +62,7 @@ class ParametersProcessorTest {
     }
 
     @Test
-    void generatesAllPrimitiveShorthandsAndCustomTypes() {
+    void generatesAllPrimitiveAndBoxedTypesViaOf() {
         JavaFileObject address = JavaFileObjects.forSourceString(
                 "com.example.Address",
                 src(
@@ -75,29 +79,27 @@ class ParametersProcessorTest {
                         "import com.pojo.parameters.Parameters;",
                         "import com.pojo.parameters.Parameters.Of;",
                         "",
-                        "@Parameters(",
-                        "        String = {\"userName\"},",
-                        "        Boolean = {\"enabledFlag\"},",
-                        "        Byte = {\"levelBox\"},",
-                        "        Short = {\"rankBox\"},",
-                        "        Integer = {\"countBox\"},",
-                        "        Long = {\"id\"},",
-                        "        Character = {\"gradeBox\"},",
-                        "        Float = {\"scoreBox\"},",
-                        "        Double = {\"amountBox\"},",
-                        "        boolean_ = {\"enabled\"},",
-                        "        byte_ = {\"level\"},",
-                        "        short_ = {\"rank\"},",
-                        "        int_ = {\"count\"},",
-                        "        long_ = {\"age\"},",
-                        "        char_ = {\"grade\"},",
-                        "        float_ = {\"score\"},",
-                        "        double_ = {\"amount\"},",
-                        "        of = {",
-                        "                @Of(Class = Address.class),",
-                        "                @Of(Class = String[].class, names = {\"tags\"})",
-                        "        }",
-                        ")",
+                        "@Parameters(of = {",
+                        "        @Of(Class = String.class, names = {\"userName\"}),",
+                        "        @Of(Class = Boolean.class, names = {\"enabledFlag\"}),",
+                        "        @Of(Class = Byte.class, names = {\"levelBox\"}),",
+                        "        @Of(Class = Short.class, names = {\"rankBox\"}),",
+                        "        @Of(Class = Integer.class, names = {\"countBox\"}),",
+                        "        @Of(Class = Long.class, names = {\"id\"}),",
+                        "        @Of(Class = Character.class, names = {\"gradeBox\"}),",
+                        "        @Of(Class = Float.class, names = {\"scoreBox\"}),",
+                        "        @Of(Class = Double.class, names = {\"amountBox\"}),",
+                        "        @Of(Class = boolean.class, names = {\"enabled\"}),",
+                        "        @Of(Class = byte.class, names = {\"level\"}),",
+                        "        @Of(Class = short.class, names = {\"rank\"}),",
+                        "        @Of(Class = int.class, names = {\"count\"}),",
+                        "        @Of(Class = long.class, names = {\"age\"}),",
+                        "        @Of(Class = char.class, names = {\"grade\"}),",
+                        "        @Of(Class = float.class, names = {\"score\"}),",
+                        "        @Of(Class = double.class, names = {\"amount\"}),",
+                        "        @Of(Class = Address.class),",
+                        "        @Of(Class = String[].class, names = {\"tags\"})",
+                        "})",
                         "public class AllTypesVO extends AllTypesVO__Parameters {",
                         "}"));
 
@@ -137,8 +139,9 @@ class ParametersProcessorTest {
                         "package com.example;",
                         "",
                         "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
                         "",
-                        "@Parameters(String = {\"userName\"})",
+                        "@Parameters(of = @Of(Class = String.class, names = {\"userName\"}))",
                         "public class MergeVO extends MergeVO__Parameters {",
                         "    private Long id;",
                         "    private String label;",
@@ -209,15 +212,16 @@ class ParametersProcessorTest {
                         "package com.example;",
                         "",
                         "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
                         "",
-                        "@Parameters(String = {\"123oops\"})",
+                        "@Parameters(of = @Of(Class = String.class, names = {\"123oops\"}))",
                         "public class BadVO extends BadVO__Parameters {",
                         "}"));
 
         Compilation compilation = compile(source);
 
         assertThat(compilation).failed();
-        assertThat(compilation).hadErrorContaining("Invalid String property name");
+        assertThat(compilation).hadErrorContaining("Invalid @Of property name");
     }
 
     @Test
@@ -228,15 +232,16 @@ class ParametersProcessorTest {
                         "package com.example;",
                         "",
                         "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
                         "",
-                        "@Parameters(int_ = {\"123oops\"})",
+                        "@Parameters(of = @Of(Class = int.class, names = {\"123oops\"}))",
                         "public class BadIntVO extends BadIntVO__Parameters {",
                         "}"));
 
         Compilation compilation = compile(source);
 
         assertThat(compilation).failed();
-        assertThat(compilation).hadErrorContaining("Invalid int property name");
+        assertThat(compilation).hadErrorContaining("Invalid @Of property name");
     }
 
     @Test
@@ -247,8 +252,9 @@ class ParametersProcessorTest {
                         "package com.example;",
                         "",
                         "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
                         "",
-                        "@Parameters(String = {\"userName\"})",
+                        "@Parameters(of = @Of(Class = String.class, names = {\"userName\"}))",
                         "public class DupVO extends DupVO__Parameters {",
                         "    private String userName;",
                         "}"));
@@ -300,11 +306,11 @@ class ParametersProcessorTest {
                         "import com.pojo.parameters.Parameters;",
                         "import com.pojo.parameters.Parameters.Of;",
                         "",
-                        "@Parameters(",
-                        "        int_ = {\"countryCode\"},",
-                        "        long_ = {\"age\"},",
-                        "        of = @Of(Class = Address.class, names = {\"homeAddress\", \"workAddress\"})",
-                        ")",
+                        "@Parameters(of = {",
+                        "        @Of(Class = int.class, names = {\"countryCode\"}),",
+                        "        @Of(Class = long.class, names = {\"age\"}),",
+                        "        @Of(Class = Address.class, names = {\"homeAddress\", \"workAddress\"})",
+                        "})",
                         "public class OfVO extends OfVO__Parameters {",
                         "}"));
 
@@ -668,10 +674,11 @@ class ParametersProcessorTest {
                         "package com.example;",
                         "",
                         "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
                         "import java.io.Serializable;",
                         "",
                         "@Parameters(",
-                        "        String = {\"userName\"},",
+                        "        of = @Of(Class = String.class, names = {\"userName\"}),",
                         "        Extends = BaseEntity.class,",
                         "        Implements = {Named.class, Serializable.class})",
                         "public class StaffVO extends StaffVO__Parameters {",
@@ -708,8 +715,9 @@ class ParametersProcessorTest {
                         "package com.example;",
                         "",
                         "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
                         "",
-                        "@Parameters(String = {\"label\"}, Extends = Counted.class)",
+                        "@Parameters(of = @Of(Class = String.class, names = {\"label\"}), Extends = Counted.class)",
                         "public class CountedVO extends CountedVO__Parameters {",
                         "}"));
 
@@ -732,8 +740,9 @@ class ParametersProcessorTest {
                         "package com.example;",
                         "",
                         "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
                         "",
-                        "@Parameters(String = {\"label\"}, Extends = Object.class)",
+                        "@Parameters(of = @Of(Class = String.class, names = {\"label\"}), Extends = Object.class)",
                         "public class ObjVO extends ObjVO__Parameters {",
                         "}"));
 
@@ -753,8 +762,9 @@ class ParametersProcessorTest {
                         "package com.example;",
                         "",
                         "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
                         "",
-                        "@Parameters(String = {\"label\"}, Extends = Runnable.class)",
+                        "@Parameters(of = @Of(Class = String.class, names = {\"label\"}), Extends = Runnable.class)",
                         "public class IfaceVO extends IfaceVO__Parameters {",
                         "}"));
 
@@ -771,8 +781,9 @@ class ParametersProcessorTest {
                         "package com.example;",
                         "",
                         "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
                         "",
-                        "@Parameters(String = {\"label\"}, Implements = String.class)",
+                        "@Parameters(of = @Of(Class = String.class, names = {\"label\"}), Implements = String.class)",
                         "public class ClassIfaceVO extends ClassIfaceVO__Parameters {",
                         "}"));
 
@@ -789,8 +800,9 @@ class ParametersProcessorTest {
                         "package com.example;",
                         "",
                         "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
                         "",
-                        "@Parameters(String = {\"label\"}, Extends = String.class)",
+                        "@Parameters(of = @Of(Class = String.class, names = {\"label\"}), Extends = String.class)",
                         "public class FinalVO extends FinalVO__Parameters {",
                         "}"));
 
@@ -816,8 +828,9 @@ class ParametersProcessorTest {
                         "package com.example;",
                         "",
                         "import com.pojo.parameters.Parameters;",
+                        "import com.pojo.parameters.Parameters.Of;",
                         "",
-                        "@Parameters(String = {\"label\"}, Extends = NeedsArg.class)",
+                        "@Parameters(of = @Of(Class = String.class, names = {\"label\"}), Extends = NeedsArg.class)",
                         "public class NeedsArgVO extends NeedsArgVO__Parameters {",
                         "}"));
 
