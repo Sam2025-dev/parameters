@@ -1,12 +1,11 @@
 # parameters
 
-Compile-time `@Parameters` for PO/VO classes. Compatible with Lombok and Java 8.
+Compile-time `@Data` for PO/VO classes, implemented like Lombok: members are
+injected into the annotated class. No superclass is generated.
 
-Place `@Parameters` on a class and extend the generated `<SimpleName>__Parameters`
-superclass. The processor assembles annotation properties and existing instance
-fields into that superclass with JavaBean accessors, `equals`, `hashCode`, and
-`toString`. The generated type can itself extend a class and implement interfaces
-via `Extends` and `Implements`.
+Place `com.pojo.parameters.Data` on a class. The processor adds `@Of` fields
+(if missing) and JavaBean accessors, `equals`, `hashCode`, and `toString` for
+those fields and existing instance fields.
 
 Published on GitHub Packages as `com.github.parameters:parameters:0.1-SNAPSHOT`.
 
@@ -32,7 +31,8 @@ Add the GitHub Packages repository (snapshots must be enabled):
 </repositories>
 ```
 
-GitHub Packages requires a token even for a public package. In `~/.m2/settings.xml` the `<id>` must match `github`:
+GitHub Packages requires a token even for a public package. In `~/.m2/settings.xml`
+the `<id>` must match `github`:
 
 ```xml
 <settings>
@@ -48,6 +48,23 @@ GitHub Packages requires a token even for a public package. In `~/.m2/settings.x
 
 The PAT needs at least `read:packages`. Package page:
 https://github.com/Sam2025-dev/parameters/packages/3259824
+
+Register it as an annotation processor next to Lombok:
+
+```xml
+<annotationProcessorPaths>
+    <path>
+        <groupId>com.github.parameters</groupId>
+        <artifactId>parameters</artifactId>
+        <version>0.1-SNAPSHOT</version>
+    </path>
+    <path>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <version>${lombok.version}</version>
+    </path>
+</annotationProcessorPaths>
+```
 
 ## Maven Central
 
@@ -76,114 +93,65 @@ Publishing to Central needs these GitHub Actions secrets:
 Upload the matching public key to a keyserver (for example https://keys.openpgp.org).
 Then tag `v0.1` or run the **Publish** workflow manually.
 
-Register it as an annotation processor next to Lombok:
+## `@Data`
 
-```xml
-<annotationProcessorPaths>
-    <path>
-        <groupId>com.github.parameters</groupId>
-        <artifactId>parameters</artifactId>
-        <version>0.1-SNAPSHOT</version>
-    </path>
-    <path>
-        <groupId>org.projectlombok</groupId>
-        <artifactId>lombok</artifactId>
-        <version>${lombok.version}</version>
-    </path>
-</annotationProcessorPaths>
-```
+`@Data` has one member: `of`, an array of `@Of`.
 
-## Members
+You can also leave `of` empty and declare instance fields on the class. Those
+fields get accessors on the same class. Static fields are ignored.
+The annotation must still produce at least one property.
 
-Every member takes property **names**. Primitive members use a trailing `_`
-because `int` and `boolean` are Java keywords.
+Use `com.pojo.parameters.Data`, not `lombok.Data`, when you want assembled
+properties. Lombok `@Data` can still be used on other types in the same project.
 
-| Member | Generated type |
-| --- | --- |
-| `String` | `String` |
-| `Boolean` `Byte` `Short` `Integer` `Long` `Character` `Float` `Double` | boxed types |
-| `boolean_` `byte_` `short_` `int_` `long_` `char_` `float_` `double_` | primitives |
-| `of` | any Java type, via `@Of` |
-
-When `@Of` omits `names`, the field is the decapitalized simple class name
-(`Address` → `address`). Types whose simple name is not a valid identifier
-(for example `Long` → `long`) must declare `names`.
-
-`@Parameters.removeAnnot` strips annotation types from every generated field
-after merge, including copies from member variables.
-
-The generated superclass can extend another class and implement interfaces:
+## `@Of`
 
 | Member | Role |
 | --- | --- |
-| `Extends` | Superclass of `<SimpleName>__Parameters` (`void.class` means none) |
-| `Implements` | Interfaces implemented by `<SimpleName>__Parameters` |
-
-`Extends` must be a non-final class with an accessible no-arg constructor.
-`Implements` must be interfaces. Generated getters and setters can satisfy those
-contracts. `equals` / `hashCode` / `toString` call `super` only when that
-superclass already overrides them.
-
-`@Of` is also how defaults, `List`/`Map`, and generics are declared. Class
-literals erase type arguments, so those cases need the extra members below.
-
-| `@Of` member | Role |
-| --- | --- |
 | `Class` | Erased class of the field (`Address.class`, `List.class`, `int.class`) |
-| `typeArgs` | Generic arguments for `Class` (`List<String>`, `Map<String, Address>`) |
 | `type` | Full type source when class literals cannot write nested generics |
 | `names` | One or more field names; derived from the type when omitted |
+| `typeArgs` | Generic arguments for `Class` (`List<String>`, `Map<String, Address>`) |
 | `initializer` | Java expression copied onto the generated field |
 
-`Class` and `type` are alternatives. `type` and `typeArgs` cannot be combined:
-put nested generics in `type`.
+Each `@Of` must declare `Class` or `type`. `Class` and `type` are alternatives.
+`type` and `typeArgs` cannot be combined: put nested generics in `type`.
+
+When `names` is omitted, the field is the decapitalized simple class name
+(`Address` → `address`). Types whose simple name is not a valid identifier
+(for example `Long` → `long`) must declare `names`.
 
 ## Example
 
 ```java
-import com.pojo.parameters.Parameters;
-import com.pojo.parameters.Parameters.Of;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
+import com.pojo.parameters.Data;
+import com.pojo.parameters.Data.Of;
 
-@Data
-@ToString(callSuper = true)
-@EqualsAndHashCode(callSuper = true)
-@Parameters(
-    String = {"userName"},
-    Boolean = {"enabledFlag"},
-    Integer = {"id"},
-    Long = {"userId"},
-    int_ = {"countryCode", "cityCode", "areaCode"},
-    of = {
-        @Of(Class = Address.class, names = {"homeAddress"}),
-        @Of(Class = String[].class, names = {"tags"})
-    }
-)
-public class UserVO extends UserVO__Parameters {
+@Data(of = {
+    @Of(Class = String.class, names = {"userName"}),
+    @Of(Class = Boolean.class, names = {"enabledFlag"}),
+    @Of(Class = Integer.class, names = {"id"}),
+    @Of(Class = Long.class, names = {"userId"}),
+    @Of(Class = int.class, names = {"countryCode", "cityCode", "areaCode"}),
+    @Of(Class = Address.class, names = {"homeAddress"}),
+    @Of(Class = String[].class, names = {"tags"})
+})
+public class UserVO {
 }
 ```
 
-This generates `UserVO__Parameters` with:
+This injects into `UserVO`:
 
 - `String userName`, `Boolean enabledFlag`, `Integer id`, `Long userId`
 - `int countryCode`, `int cityCode`, `int areaCode`
 - `Address homeAddress`, `String[] tags`
 
-Lombok annotations on the subclass keep working. Use
-`@EqualsAndHashCode(callSuper = true)` and `@ToString(callSuper = true)` if
-Lombok should include the assembled properties.
-
-Shorthand members (`String`, `int_`, …) only supply names and types. Defaults
-and generic collections go on `@Of`, as in the next sections.
+Accessors, `equals`, `hashCode`, and `toString` live on the annotated class.
 
 ## Defaults
 
 Generated fields use ordinary Java defaults (`null`, `0`, `false`) unless you
-set an initializer.
-
-Per-name defaults are not available on shorthand members. Put them on `@Of`:
+set an initializer on `@Of`:
 
 ```java
 @Of(Class = String.class, names = {"status"}, initializer = "\"ACTIVE\""),
@@ -196,33 +164,30 @@ Per-name defaults are not available on shorthand members. Put them on `@Of`:
 ```
 
 `initializer` is copied as Java source, so strings need escaped quotes
-(`"\"ACTIVE\""`), longs need `L`, and collection factories should be
-fully-qualified if you do not add imports to the generated superclass.
+(`"\"ACTIVE\""`), longs need `L`. Simple names follow the annotated file's
+imports.
 
-Instance field initializers are copied when the compiler exposes the source
-(javac does), including compile-time constants:
+Instance field initializers stay on the class:
 
 ```java
-@Parameters
-public class UserVO extends UserVO__Parameters {
+@Data
+public class UserVO {
     private int countryCode = 86;
     private String status = "ACTIVE";
     private List<String> roles = java.util.Collections.emptyList();
 }
 ```
 
-Simple names in those expressions must already be fully qualified, because the
-generated superclass does not reuse the original file's imports. You can also
-assign defaults in a subclass constructor after generation.
+You can also assign defaults in a constructor.
 
 ## Annotations
 
-Declare annotations on the model field. The processor copies those mirrors—
-including member values—onto the generated field:
+Declare annotations on the model field. They stay on that field; `@Of` fields
+are injected without extra annotations:
 
 ```java
-@Parameters
-public class UserVO extends UserVO__Parameters {
+@Data
+public class UserVO {
     @Size(min = 1, max = 32)
     @JsonProperty("user_name")
     @Deprecated
@@ -230,56 +195,8 @@ public class UserVO extends UserVO__Parameters {
 }
 ```
 
-Lombok annotations are not copied. Prefer declaring properties on `@Parameters`
-when the class also uses `@Data`, so accessors live on the generated superclass
-instead of a second field on the subclass.
-
-`@Parameters.removeAnnot` drops copied annotations by type, including mirrors
-that have attributes. It applies to every generated field:
-
-```java
-@Parameters(removeAnnot = {Deprecated.class, Size.class})
-public class UserVO extends UserVO__Parameters {
-    @Size(min = 1, max = 32)
-    @JsonProperty("user_name")
-    @Deprecated
-    private String userName;
-}
-```
-
-The generated field keeps `@JsonProperty("user_name")` and drops `@Deprecated`
-and `@Size`. `Size.class` matches `@Size(min = 1, max = 32)` because removal
-is by annotation type, not the exact mirror text.
-
-## Superclass and interfaces
-
-Java allows only one superclass, so an annotated type cannot both extend
-`<SimpleName>__Parameters` and another domain class. Put that parent and any
-interfaces on `@Parameters` instead; they are copied onto the generated type:
-
-```java
-@Parameters(
-    String = {"userName"},
-    Extends = BaseEntity.class,
-    Implements = {Named.class, Serializable.class}
-)
-public class StaffVO extends StaffVO__Parameters {
-}
-```
-
-This generates:
-
-```java
-public abstract class StaffVO__Parameters
-        extends BaseEntity
-        implements Named, Serializable {
-    private String userName;
-    // getters, setters, equals, hashCode, toString
-}
-```
-
-`StaffVO` is then a `BaseEntity` and a `Named`. If `Named` declares
-`getUserName` / `setUserName`, the generated accessors fulfill the contract.
+Lombok annotations are not treated specially. Prefer `@Of` for properties that
+should be injected, so you do not declare the same field twice.
 
 ## Collections, maps, and generics
 
@@ -307,8 +224,8 @@ Instance fields keep their generic types when merged, so this is equivalent for
 `List`/`Map`:
 
 ```java
-@Parameters
-public class UserVO extends UserVO__Parameters {
+@Data
+public class UserVO {
     private List<String> roles;
     private Map<String, Address> addresses;
 }
@@ -319,44 +236,36 @@ public class UserVO extends UserVO__Parameters {
 One class that uses the pieces together:
 
 ```java
-import com.pojo.parameters.Parameters;
-import com.pojo.parameters.Parameters.Of;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
+import com.pojo.parameters.Data;
+import com.pojo.parameters.Data.Of;
 
 import java.util.List;
 import java.util.Map;
 
-@Data
-@ToString(callSuper = true)
-@EqualsAndHashCode(callSuper = true)
-@Parameters(
-    String = {"userName"},
-    int_ = {"countryCode"},
-    of = {
-        @Of(Class = Address.class, names = {"homeAddress"}),
-        @Of(
-            Class = List.class,
-            typeArgs = {String.class},
-            names = {"roles"},
-            initializer = "java.util.Collections.emptyList()"),
-        @Of(
-            Class = Map.class,
-            typeArgs = {String.class, Address.class},
-            names = {"addresses"}),
-        @Of(
-            type = "java.util.List<java.util.Map<String, String>>",
-            names = {"attributes"})
-    }
-)
-public class ProfileVO extends ProfileVO__Parameters {
+@Data(of = {
+    @Of(Class = String.class, names = {"userName"}),
+    @Of(Class = int.class, names = {"countryCode"}),
+    @Of(Class = Address.class, names = {"homeAddress"}),
+    @Of(
+        Class = List.class,
+        typeArgs = {String.class},
+        names = {"roles"},
+        initializer = "java.util.Collections.emptyList()"),
+    @Of(
+        Class = Map.class,
+        typeArgs = {String.class, Address.class},
+        names = {"addresses"}),
+    @Of(
+        type = "java.util.List<java.util.Map<String, String>>",
+        names = {"attributes"})
+})
+public class ProfileVO {
     @Deprecated
     private String status = "ACTIVE";
 }
 ```
 
-Generated `ProfileVO__Parameters` includes:
+Generated members on `ProfileVO` include:
 
 - `String userName`, `int countryCode`
 - `Address homeAddress`

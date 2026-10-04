@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ProfileVOTest {
 
     @Test
-    void defaultsAndCollectionsAreAssembledOnTheGeneratedSuperclass() throws Exception {
+    void defaultsAndCollectionsAreAssembledOnTheClass() throws Exception {
         ProfileVO vo = new ProfileVO();
         assertNull(vo.getUserName());
         assertEquals(0, vo.getCountryCode());
@@ -38,24 +38,24 @@ class ProfileVOTest {
 
     @Test
     void generatedFieldsKeepGenericsDefaultsAndMarkerAnnotations() throws Exception {
-        Class<?> generated = ProfileVO.class.getSuperclass();
-        assertEquals("ProfileVO__Parameters", generated.getSimpleName());
+        Class<?> type = ProfileVO.class;
+        assertEquals("ProfileVO", type.getSimpleName());
 
-        Field roles = generated.getDeclaredField("roles");
+        Field roles = type.getDeclaredField("roles");
         assertTrue(roles.getGenericType() instanceof ParameterizedType);
         assertEquals("java.util.List<java.lang.String>", roles.getGenericType().getTypeName());
 
-        Field addresses = generated.getDeclaredField("addresses");
+        Field addresses = type.getDeclaredField("addresses");
         assertEquals(
                 "java.util.Map<java.lang.String, com.branchkit.po.Address>",
                 addresses.getGenericType().getTypeName());
 
-        Field attributes = generated.getDeclaredField("attributes");
+        Field attributes = type.getDeclaredField("attributes");
         assertEquals(
                 "java.util.List<java.util.Map<java.lang.String, java.lang.String>>",
                 attributes.getGenericType().getTypeName());
 
-        Field status = generated.getDeclaredField("status");
+        Field status = type.getDeclaredField("status");
         assertEquals(String.class, status.getType());
         assertNotNull(status.getAnnotation(Deprecated.class));
     }

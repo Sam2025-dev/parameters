@@ -1,7 +1,5 @@
 package com.pojo.parameters.processor;
 
-import com.pojo.parameters.Parameters;
-
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
@@ -9,7 +7,6 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
-import javax.lang.model.element.NestingKind;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.ArrayType;
@@ -23,57 +20,36 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 /**
  * Collects annotation-declared properties and instance fields into one list.
  */
-final class AssembledProperties {
+public final class AssembledProperties {
 
     private static final List<String> INTEGRAL_PRIMITIVES =
             Arrays.asList("byte", "short", "int", "long", "char");
 
     private final List<AssembledProperty> properties;
-    private final String superclass;
-    private final List<String> interfaces;
-    private final boolean callSuperEquals;
-    private final boolean callSuperToString;
 
     AssembledProperties(List<AssembledProperty> properties) {
-        this(properties, null, Collections.<String>emptyList(), false, false);
-    }
-
-    AssembledProperties(
-            List<AssembledProperty> properties,
-            String superclass,
-            List<String> interfaces,
-            boolean callSuperEquals,
-            boolean callSuperToString) {
         this.properties = Collections.unmodifiableList(new ArrayList<AssembledProperty>(properties));
-        this.superclass = superclass;
-        this.interfaces = Collections.unmodifiableList(new ArrayList<String>(
-                interfaces == null ? Collections.<String>emptyList() : interfaces));
-        this.callSuperEquals = callSuperEquals;
-        this.callSuperToString = callSuperToString;
     }
 
-    List<AssembledProperty> properties() {
+    public List<AssembledProperty> properties() {
         return properties;
     }
 
-    boolean isEmpty() {
+    public boolean isEmpty() {
         return properties.isEmpty();
     }
 
     static AssembledProperties from(
             TypeElement type,
-            Parameters annotation,
             AnnotationMirror mirror,
             Elements elements,
             Function<VariableElement, String> fieldInitializer,
@@ -83,77 +59,14 @@ final class AssembledProperties {
         if (!mergeExistingFields(type, fieldInitializer, byName, error)) {
             return null;
         }
-        if (!addNamedProperties(type, annotation.String(), "String", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.Boolean(), "Boolean", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.Byte(), "Byte", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.Short(), "Short", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.Integer(), "Integer", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.Long(), "Long", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.Character(), "Character", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.Float(), "Float", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.Double(), "Double", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.boolean_(), "boolean", true, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.byte_(), "byte", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.short_(), "short", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.int_(), "int", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.long_(), "long", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.char_(), "char", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.float_(), "float", false, byName, error)) {
-            return null;
-        }
-        if (!addNamedProperties(type, annotation.double_(), "double", false, byName, error)) {
-            return null;
-        }
         if (!addOfProperties(type, mirror, elements, byName, error)) {
             return null;
         }
         if (byName.isEmpty()) {
-            error.accept(type, "@Parameters must declare at least one property or instance field to merge.");
+            error.accept(type, "@Data must declare at least one property or instance field to merge.");
             return null;
         }
-        if (!applyParametersRemoveAnnot(type, mirror, elements, byName, error)) {
-            return null;
-        }
-        Heritage heritage = resolveHeritage(type, mirror, elements, error);
-        if (heritage == null) {
-            return null;
-        }
-        return new AssembledProperties(
-                new ArrayList<AssembledProperty>(byName.values()),
-                heritage.superclass,
-                heritage.interfaces,
-                heritage.callSuperEquals,
-                heritage.callSuperToString);
+        return new AssembledProperties(new ArrayList<AssembledProperty>(byName.values()));
     }
 
     String renderJava(String packageName, String className) {
@@ -166,21 +79,9 @@ final class AssembledProperties {
         }
         java.append("import java.util.Objects;\n\n");
         java.append("/**\n");
-        java.append(" * Generated by {@code @Parameters}. Do not edit.\n");
+        java.append(" * Generated by {@code @Data}. Do not edit.\n");
         java.append(" */\n");
         java.append("public abstract class ").append(className);
-        if (superclass != null) {
-            java.append(" extends ").append(superclass);
-        }
-        if (!interfaces.isEmpty()) {
-            java.append(" implements ");
-            for (int i = 0; i < interfaces.size(); i++) {
-                if (i > 0) {
-                    java.append(", ");
-                }
-                java.append(interfaces.get(i));
-            }
-        }
         java.append(" {\n\n");
         for (AssembledProperty property : properties) {
             for (String annotation : property.annotations()) {
@@ -226,8 +127,11 @@ final class AssembledProperties {
                 continue;
             }
             String name = field.getSimpleName().toString();
+            if (name.startsWith("$")) {
+                continue;
+            }
             if (!SourceVersion.isIdentifier(name) || SourceVersion.isKeyword(name)) {
-                error.accept(field, "Cannot merge field into @Parameters: invalid name " + name);
+                error.accept(field, "Cannot merge field into @Data: invalid name " + name);
                 return false;
             }
             AssembledProperty property = AssembledProperty.fromType(
@@ -235,7 +139,7 @@ final class AssembledProperties {
                     field.asType(),
                     Collections.<TypeMirror>emptyList(),
                     fieldInitializer.apply(field),
-                    renderFieldAnnotations(field));
+                    renderFieldAnnotations(field)).asExistingField();
             if (!putMerged(type, byName, property, error)) {
                 return false;
             }
@@ -302,6 +206,9 @@ final class AssembledProperties {
                 names = Collections.singletonList(derived);
             }
             for (String name : names) {
+                if (name.startsWith("$")) {
+                    continue;
+                }
                 if (!SourceVersion.isIdentifier(name) || SourceVersion.isKeyword(name)) {
                     error.accept(type, "Invalid @Of property name: " + name);
                     return false;
@@ -314,262 +221,6 @@ final class AssembledProperties {
                 if (!putMerged(type, byName, property, error)) {
                     return false;
                 }
-            }
-        }
-        return true;
-    }
-
-    private static void applyRemovedAnnotations(
-            Map<String, AssembledProperty> byName,
-            String name,
-            List<String> removedAnnotations) {
-        if (removedAnnotations.isEmpty()) {
-            return;
-        }
-        AssembledProperty property = byName.get(name);
-        if (property != null) {
-            byName.put(name, property.withoutAnnotationTypes(removedAnnotations));
-        }
-    }
-
-    private static boolean applyParametersRemoveAnnot(
-            TypeElement type,
-            AnnotationMirror mirror,
-            Elements elements,
-            Map<String, AssembledProperty> byName,
-            BiConsumer<Element, String> error) {
-        if (mirror == null) {
-            return true;
-        }
-        List<String> removedAnnotations = new ArrayList<String>();
-        if (!collectRemovedAnnotations(
-                type, mirror, elements, "@Parameters removeAnnot", removedAnnotations, error)) {
-            return false;
-        }
-        if (removedAnnotations.isEmpty()) {
-            return true;
-        }
-        for (String name : new ArrayList<String>(byName.keySet())) {
-            applyRemovedAnnotations(byName, name, removedAnnotations);
-        }
-        return true;
-    }
-
-    private static Heritage resolveHeritage(
-            TypeElement type,
-            AnnotationMirror mirror,
-            Elements elements,
-            BiConsumer<Element, String> error) {
-        if (mirror == null) {
-            return Heritage.NONE;
-        }
-        TypeMirror extendMirror = classValue(mirror, elements, "Extends");
-        String superclass = null;
-        TypeElement superType = null;
-        if (extendMirror != null && extendMirror.getKind() != TypeKind.VOID) {
-            superType = asTypeElement(extendMirror);
-            if (superType == null || superType.getKind() != ElementKind.CLASS) {
-                error.accept(type, "@Parameters Extends must be a class: " + extendMirror);
-                return null;
-            }
-            if (isJavaLangObject(superType)) {
-                superType = null;
-            } else if (!validateSuperclass(type, superType, error)) {
-                return null;
-            } else {
-                superclass = AssembledProperty.renderType(extendMirror);
-            }
-        }
-        LinkedHashSet<String> interfaces = new LinkedHashSet<String>();
-        for (TypeMirror ifaceMirror : classValues(mirror, elements, "Implements")) {
-            TypeElement iface = asTypeElement(ifaceMirror);
-            if (iface == null || iface.getKind() != ElementKind.INTERFACE) {
-                error.accept(type, "@Parameters Implements must be interfaces: " + ifaceMirror);
-                return null;
-            }
-            if (!isAccessibleFrom(type, iface)) {
-                error.accept(type, "@Parameters Implements type must be accessible: " + ifaceMirror);
-                return null;
-            }
-            interfaces.add(AssembledProperty.renderType(ifaceMirror));
-        }
-        boolean callSuperEquals = superType != null
-                && (hierarchyDeclares(superType, "equals", 1) || hierarchyDeclares(superType, "hashCode", 0));
-        boolean callSuperToString = superType != null && hierarchyDeclares(superType, "toString", 0);
-        return new Heritage(
-                superclass,
-                new ArrayList<String>(interfaces),
-                callSuperEquals,
-                callSuperToString);
-    }
-
-    private static boolean validateSuperclass(
-            TypeElement type,
-            TypeElement superType,
-            BiConsumer<Element, String> error) {
-        if (type.getQualifiedName().contentEquals(superType.getQualifiedName())) {
-            error.accept(type, "@Parameters Extends cannot be the annotated class itself.");
-            return false;
-        }
-        if (superType.getModifiers().contains(Modifier.FINAL)) {
-            error.accept(type, "@Parameters cannot extend a final class: " + superType.getQualifiedName());
-            return false;
-        }
-        NestingKind nesting = superType.getNestingKind();
-        if (nesting == NestingKind.ANONYMOUS || nesting == NestingKind.LOCAL
-                || (nesting == NestingKind.MEMBER && !superType.getModifiers().contains(Modifier.STATIC))) {
-            error.accept(type, "@Parameters Extends cannot be an inner class: " + superType.getQualifiedName());
-            return false;
-        }
-        if (!isAccessibleFrom(type, superType)) {
-            error.accept(type, "@Parameters Extends type must be accessible: " + superType.getQualifiedName());
-            return false;
-        }
-        if (!hasAccessibleNoArgConstructor(type, superType)) {
-            error.accept(type, "@Parameters Extends type must have an accessible no-arg constructor: "
-                    + superType.getQualifiedName());
-            return false;
-        }
-        return true;
-    }
-
-    private static boolean isAccessibleFrom(TypeElement annotated, TypeElement target) {
-        if (target.getModifiers().contains(Modifier.PUBLIC)) {
-            return true;
-        }
-        return ParametersProcessor.packageName(annotated).equals(ParametersProcessor.packageName(target));
-    }
-
-    private static boolean hasAccessibleNoArgConstructor(TypeElement annotated, TypeElement superType) {
-        boolean anyConstructor = false;
-        for (Element enclosed : superType.getEnclosedElements()) {
-            if (enclosed.getKind() != ElementKind.CONSTRUCTOR || !(enclosed instanceof ExecutableElement)) {
-                continue;
-            }
-            anyConstructor = true;
-            ExecutableElement constructor = (ExecutableElement) enclosed;
-            if (!constructor.getParameters().isEmpty()) {
-                continue;
-            }
-            Set<Modifier> modifiers = constructor.getModifiers();
-            if (modifiers.contains(Modifier.PRIVATE)) {
-                continue;
-            }
-            if (modifiers.contains(Modifier.PUBLIC) || modifiers.contains(Modifier.PROTECTED)) {
-                return true;
-            }
-            if (ParametersProcessor.packageName(annotated).equals(ParametersProcessor.packageName(superType))) {
-                return true;
-            }
-        }
-        return !anyConstructor;
-    }
-
-    private static boolean hierarchyDeclares(TypeElement type, String methodName, int parameterCount) {
-        TypeElement current = type;
-        while (current != null && !isJavaLangObject(current)) {
-            for (Element enclosed : current.getEnclosedElements()) {
-                if (enclosed.getKind() != ElementKind.METHOD || !(enclosed instanceof ExecutableElement)) {
-                    continue;
-                }
-                ExecutableElement method = (ExecutableElement) enclosed;
-                if (!method.getSimpleName().contentEquals(methodName)
-                        || method.getParameters().size() != parameterCount) {
-                    continue;
-                }
-                if ("equals".equals(methodName)) {
-                    TypeMirror parameter = method.getParameters().get(0).asType();
-                    if (isJavaLangObject(parameter)) {
-                        return true;
-                    }
-                } else {
-                    return true;
-                }
-            }
-            current = asTypeElement(current.getSuperclass());
-        }
-        return false;
-    }
-
-    private static TypeElement asTypeElement(TypeMirror type) {
-        if (type == null || type.getKind() != TypeKind.DECLARED) {
-            return null;
-        }
-        Element element = ((DeclaredType) type).asElement();
-        return element instanceof TypeElement ? (TypeElement) element : null;
-    }
-
-    private static boolean isJavaLangObject(TypeElement type) {
-        return "java.lang.Object".contentEquals(type.getQualifiedName());
-    }
-
-    private static boolean isJavaLangObject(TypeMirror type) {
-        TypeElement element = asTypeElement(type);
-        return element != null && isJavaLangObject(element);
-    }
-
-    private static final class Heritage {
-        static final Heritage NONE = new Heritage(null, Collections.<String>emptyList(), false, false);
-
-        final String superclass;
-        final List<String> interfaces;
-        final boolean callSuperEquals;
-        final boolean callSuperToString;
-
-        Heritage(
-                String superclass,
-                List<String> interfaces,
-                boolean callSuperEquals,
-                boolean callSuperToString) {
-            this.superclass = superclass;
-            this.interfaces = interfaces;
-            this.callSuperEquals = callSuperEquals;
-            this.callSuperToString = callSuperToString;
-        }
-    }
-
-    private static boolean collectRemovedAnnotations(
-            TypeElement type,
-            AnnotationMirror nested,
-            Elements elements,
-            String errorLabel,
-            List<String> removedAnnotations,
-            BiConsumer<Element, String> error) {
-        for (TypeMirror annotationType : classValues(nested, elements, "removeAnnot")) {
-            if (annotationType.getKind() != TypeKind.DECLARED) {
-                error.accept(type, errorLabel + " must be annotation types: " + annotationType);
-                return false;
-            }
-            Element annotationElement = ((DeclaredType) annotationType).asElement();
-            if (annotationElement.getKind() != ElementKind.ANNOTATION_TYPE) {
-                error.accept(type, errorLabel + " must be annotation types: " + annotationType);
-                return false;
-            }
-            String rendered = AssembledProperty.renderType(annotationType);
-            if (!removedAnnotations.contains(rendered)) {
-                removedAnnotations.add(rendered);
-            }
-        }
-        return true;
-    }
-
-    private static boolean addNamedProperties(
-            TypeElement type,
-            String[] names,
-            String typeSource,
-            boolean primitiveBoolean,
-            Map<String, AssembledProperty> byName,
-            BiConsumer<Element, String> error) {
-        for (int i = 0; i < names.length; i++) {
-            String name = names[i];
-            if (!SourceVersion.isIdentifier(name) || SourceVersion.isKeyword(name)) {
-                error.accept(type, "Invalid " + typeSource + " property name: " + name);
-                return false;
-            }
-            AssembledProperty property = new AssembledProperty(
-                    name, typeSource, null, primitiveBoolean, false, Collections.<String>emptyList());
-            if (!putMerged(type, byName, property, error)) {
-                return false;
             }
         }
         return true;
@@ -616,11 +267,6 @@ final class AssembledProperties {
         java.append("        if (!(o instanceof ").append(className).append(")) {\n");
         java.append("            return false;\n");
         java.append("        }\n");
-        if (callSuperEquals) {
-            java.append("        if (!super.equals(o)) {\n");
-            java.append("            return false;\n");
-            java.append("        }\n");
-        }
         java.append("        ").append(className).append(" that = (").append(className).append(") o;\n");
         if (properties.isEmpty()) {
             java.append("        return true;\n");
@@ -630,11 +276,7 @@ final class AssembledProperties {
         java.append("    }\n\n");
         java.append("    @Override\n");
         java.append("    public int hashCode() {\n");
-        if (callSuperEquals) {
-            java.append("        return 31 * super.hashCode() + ").append(hashExpression()).append(";\n");
-        } else {
-            java.append("        return ").append(hashExpression()).append(";\n");
-        }
+        java.append("        return ").append(hashExpression()).append(";\n");
         java.append("    }\n\n");
         java.append("    @Override\n");
         java.append("    public String toString() {\n");
@@ -647,13 +289,6 @@ final class AssembledProperties {
             }
             java.append(property.name()).append("=\" + ");
             java.append(toStringFragment(property)).append('\n');
-        }
-        if (callSuperToString) {
-            java.append("                + \"");
-            if (!properties.isEmpty()) {
-                java.append(", ");
-            }
-            java.append("super=\" + super.toString()\n");
         }
         java.append("                + '}';\n");
         java.append("    }\n");
@@ -1018,7 +653,7 @@ final class AssembledProperties {
         return escaped.toString();
     }
 
-    static final class AssembledProperty {
+    public static final class AssembledProperty {
 
         private final String name;
         private final String typeSource;
@@ -1026,6 +661,7 @@ final class AssembledProperties {
         private final boolean primitiveBoolean;
         private final boolean array;
         private final List<String> annotations;
+        private final boolean generateField;
 
         AssembledProperty(
                 String name,
@@ -1033,7 +669,8 @@ final class AssembledProperties {
                 String initializer,
                 boolean primitiveBoolean,
                 boolean array,
-                List<String> annotations) {
+                List<String> annotations,
+                boolean generateField) {
             this.name = Objects.requireNonNull(name);
             this.typeSource = Objects.requireNonNull(typeSource);
             this.initializer = initializer;
@@ -1041,6 +678,7 @@ final class AssembledProperties {
             this.array = array;
             this.annotations = Collections.unmodifiableList(new ArrayList<String>(
                     annotations == null ? Collections.<String>emptyList() : annotations));
+            this.generateField = generateField;
         }
 
         static AssembledProperty fromType(String name, TypeMirror type, String initializer) {
@@ -1072,7 +710,8 @@ final class AssembledProperties {
                     initializer,
                     type.getKind() == TypeKind.BOOLEAN,
                     type.getKind() == TypeKind.ARRAY,
-                    annotations);
+                    annotations,
+                    true);
         }
 
         static AssembledProperty fromSource(
@@ -1087,7 +726,8 @@ final class AssembledProperties {
                     initializer,
                     "boolean".equals(trimmed),
                     isArrayTypeSource(trimmed),
-                    annotations);
+                    annotations,
+                    true);
         }
 
         static boolean isArrayTypeSource(String typeSource) {
@@ -1103,65 +743,52 @@ final class AssembledProperties {
                 }
             }
             return new AssembledProperty(
-                    name, typeSource, mergedInitializer, primitiveBoolean, array, mergedAnnotations);
+                    name, typeSource, mergedInitializer, primitiveBoolean, array, mergedAnnotations,
+                    this.generateField && other.generateField);
         }
 
-        AssembledProperty withoutAnnotationTypes(List<String> removedTypes) {
-            if (removedTypes == null || removedTypes.isEmpty() || annotations.isEmpty()) {
-                return this;
-            }
-            List<String> kept = new ArrayList<String>();
-            for (String annotation : annotations) {
-                if (!removedTypes.contains(annotationTypeName(annotation))) {
-                    kept.add(annotation);
-                }
-            }
-            if (kept.size() == annotations.size()) {
-                return this;
-            }
-            return new AssembledProperty(name, typeSource, initializer, primitiveBoolean, array, kept);
-        }
-
-        static String annotationTypeName(String rendered) {
-            String type = rendered.startsWith("@") ? rendered.substring(1) : rendered;
-            int paren = type.indexOf('(');
-            if (paren >= 0) {
-                type = type.substring(0, paren);
-            }
-            return type.trim();
-        }
-
-        String name() {
+        public String name() {
             return name;
         }
 
-        String typeSource() {
+        public String typeSource() {
             return typeSource;
         }
 
-        String initializer() {
+        public String initializer() {
             return initializer;
         }
 
-        boolean primitiveBoolean() {
+        public boolean primitiveBoolean() {
             return primitiveBoolean;
         }
 
-        boolean array() {
+        public boolean array() {
             return array;
         }
 
-        List<String> annotations() {
+        public List<String> annotations() {
             return annotations;
         }
 
-        String getter() {
-            String prefix = primitiveBoolean ? "is" : "get";
-            return ParametersProcessor.accessor(prefix, name);
+        public boolean generateField() {
+            return generateField;
         }
 
-        String setter() {
-            return ParametersProcessor.accessor("set", name);
+        AssembledProperty asExistingField() {
+            if (!generateField) {
+                return this;
+            }
+            return new AssembledProperty(
+                    name, typeSource, initializer, primitiveBoolean, array, annotations, false);
+        }
+
+        public String getter() {
+            return com.pojo.parameters.handlers.HandlerUtil.toGetterName(name, primitiveBoolean);
+        }
+
+        public String setter() {
+            return com.pojo.parameters.handlers.HandlerUtil.toSetterName(name, primitiveBoolean);
         }
 
         static String renderType(TypeMirror type) {

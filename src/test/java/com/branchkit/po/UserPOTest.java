@@ -77,24 +77,24 @@ class UserPOTest {
     }
 
     @Test
-    void assembledPropertiesLiveOnGeneratedSuperclass() throws Exception {
-        Class<?> generated = UserPO.class.getSuperclass();
-        assertEquals("UserPO__Parameters", generated.getSimpleName());
+    void assembledPropertiesLiveOnTheClass() throws Exception {
+        Class<?> type = UserPO.class;
+        assertEquals("UserPO", type.getSimpleName());
 
-        Field userName = generated.getDeclaredField("userName");
+        Field userName = type.getDeclaredField("userName");
         assertEquals(String.class, userName.getType());
         assertTrue(Modifier.isPrivate(userName.getModifiers()));
         assertFalse(Modifier.isStatic(userName.getModifiers()));
 
-        assertEquals(Long.class, generated.getDeclaredField("id").getType());
-        assertEquals(Address.class, generated.getDeclaredField("homeAddress").getType());
-        assertEquals(boolean.class, generated.getDeclaredField("active").getType());
-        assertEquals(long.class, generated.getDeclaredField("age").getType());
-        assertTrue(java.io.Serializable.class.isAssignableFrom(generated));
+        assertEquals(Long.class, type.getDeclaredField("id").getType());
+        assertEquals(Address.class, type.getDeclaredField("homeAddress").getType());
+        assertEquals(boolean.class, type.getDeclaredField("active").getType());
+        assertEquals(long.class, type.getDeclaredField("age").getType());
+        assertTrue(java.io.Serializable.class.isAssignableFrom(UserPO.class));
     }
 
     @Test
-    void lombokAccessorsRemainAvailableAlongsideParameters() {
+    void assembledAccessorsAndToStringUseMergedFields() {
         UserPO user = new UserPO();
         user.setName("Dana");
         user.setUserName("dana");

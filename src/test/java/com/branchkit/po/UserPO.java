@@ -1,45 +1,38 @@
 package com.branchkit.po;
 
-import com.pojo.parameters.Parameters;
-import com.pojo.parameters.Parameters.Of;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import com.pojo.parameters.Data;
+import com.pojo.parameters.Data.Of;
 
 import java.io.Serializable;
 
 /**
  * Persistent object for the user table.
  *
- * <p>Instance-level user attributes are declared on {@link Parameters} and merged
- * into the generated superclass together with extra primitive and custom-typed
- * properties. {@code Serializable} is implemented by that generated type via
- * {@link Parameters#Implements()}.
+ * <p>Instance-level user attributes are declared on {@link Data} and merged
+ * into the annotated class together with extra primitive and custom-typed
+ * properties.
  */
-@Data
-@NoArgsConstructor
-@ToString(callSuper = true)
-@EqualsAndHashCode(callSuper = true)
-@Parameters(
-        String = {"userName", "name", "address", "phone"},
-        Long = {"id"},
-        boolean_ = {"active"},
-        byte_ = {"level"},
-        short_ = {"rank"},
-        int_ = {"countryCode", "cityCode", "areaCode"},
-        long_ = {"age"},
-        char_ = {"grade"},
-        float_ = {"score"},
-        double_ = {"amount"},
+@Data(
         of = {
+                @Of(Class = String.class, names = {"userName", "name", "address", "phone"}),
+                @Of(Class = Long.class, names = {"id"}),
+                @Of(Class = boolean.class, names = {"active"}),
+                @Of(Class = byte.class, names = {"level"}),
+                @Of(Class = short.class, names = {"rank"}),
+                @Of(Class = int.class, names = {"countryCode", "cityCode", "areaCode"}),
+                @Of(Class = long.class, names = {"age"}),
+                @Of(Class = char.class, names = {"grade"}),
+                @Of(Class = float.class, names = {"score"}),
+                @Of(Class = double.class, names = {"amount"}),
                 @Of(Class = Address.class, names = {"homeAddress"})
-        },
-        Implements = {Serializable.class}
+        }
 )
-public class UserPO extends UserPO__Parameters {
+public class UserPO implements Serializable {
 
     private static final long serialVersionUID = 1L;
+
+    public UserPO() {
+    }
 
     public UserPO(Long id, String name, String address, String phone) {
         setId(id);

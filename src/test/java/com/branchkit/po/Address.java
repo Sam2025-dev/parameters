@@ -5,7 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Custom value type used to verify {@code @Parameters} assembly of non-JDK classes.
+ * Custom value type used to verify {@code @Data} assembly of non-JDK classes.
  */
 @Data
 @NoArgsConstructor
