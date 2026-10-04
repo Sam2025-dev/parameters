@@ -7,13 +7,13 @@ Place `com.pojo.parameters.Data` on a class. The processor adds `@Of` fields
 (if missing) and JavaBean accessors, `equals`, `hashCode`, and `toString` for
 those fields and existing instance fields.
 
-Published on GitHub Packages as `com.github.parameters:parameters:0.1-SNAPSHOT`.
+Published on GitHub Packages as `com.github.parameters:parameters:1.0`.
 
 ```xml
 <dependency>
     <groupId>com.github.parameters</groupId>
     <artifactId>parameters</artifactId>
-    <version>0.1-SNAPSHOT</version>
+    <version>1.0</version>
 </dependency>
 ```
 
@@ -56,7 +56,7 @@ Register it as an annotation processor next to Lombok:
     <path>
         <groupId>com.github.parameters</groupId>
         <artifactId>parameters</artifactId>
-        <version>0.1-SNAPSHOT</version>
+        <version>1.0</version>
     </path>
     <path>
         <groupId>org.projectlombok</groupId>
@@ -70,14 +70,14 @@ Register it as an annotation processor next to Lombok:
 
 Maven Central cannot host `com.github.parameters` unless that DNS namespace is verified.
 Signing in to [Central Portal](https://central.sonatype.com/) with GitHub grants
-`io.github.sam2025-dev`. After a `v0.1` release, consumers can use Central with
+`io.github.sam2025-dev`. After a `v1.0` release, consumers can use Central with
 no extra repository:
 
 ```xml
 <dependency>
     <groupId>io.github.sam2025-dev</groupId>
     <artifactId>parameters</artifactId>
-    <version>0.1</version>
+    <version>1.0</version>
 </dependency>
 ```
 
@@ -91,7 +91,7 @@ Publishing to Central needs these GitHub Actions secrets:
 | `GPG_PASSPHRASE` | Passphrase for that key |
 
 Upload the matching public key to a keyserver (for example https://keys.openpgp.org).
-Then tag `v0.1` or run the **Publish** workflow manually.
+Then tag `v1.0` or run the **Publish** workflow manually.
 
 ## `@Data`
 

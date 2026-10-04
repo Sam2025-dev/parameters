@@ -6,7 +6,7 @@
 
     <groupId>com.github.parameters</groupId>
     <artifactId>parameters</artifactId>
-    <version>0.1-SNAPSHOT</version>
+    <version>1.0</version>
 
     <name>parameters</name>
     <description>@Data annotation and compile-time processor</description>
