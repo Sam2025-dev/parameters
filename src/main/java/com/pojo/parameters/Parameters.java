@@ -12,40 +12,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.SOURCE)
 public @interface Parameters {
 
-    String[] String() default {};
-
-    String[] Boolean() default {};
-
-    String[] Byte() default {};
-
-    String[] Short() default {};
-
-    String[] Integer() default {};
-
-    String[] Long() default {};
-
-    String[] Character() default {};
-
-    String[] Float() default {};
-
-    String[] Double() default {};
-
-    String[] boolean_() default {};
-
-    String[] byte_() default {};
-
-    String[] short_() default {};
-
-    String[] int_() default {};
-
-    String[] long_() default {};
-
-    String[] char_() default {};
-
-    String[] float_() default {};
-
-    String[] double_() default {};
-
     Of[] of() default {};
 
     /**

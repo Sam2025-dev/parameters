@@ -18,9 +18,9 @@ import java.util.Map;
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 @Parameters(
-        String = {"userName"},
-        int_ = {"countryCode"},
         of = {
+                @Of(Class = String.class, names = {"userName"}),
+                @Of(Class = int.class, names = {"countryCode"}),
                 @Of(Class = Address.class, names = {"homeAddress"}),
                 @Of(
                         Class = List.class,

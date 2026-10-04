@@ -95,29 +95,19 @@ Register it as an annotation processor next to Lombok:
 
 ## Members
 
-Every member takes property **names**. Primitive members use a trailing `_`
-because `int` and `boolean` are Java keywords.
+Declare properties with `of` (`@Of`). The other `@Parameters` members control
+merge behavior and the generated type's heritage:
 
-| Member | Generated type |
+| Member | Role |
 | --- | --- |
-| `String` | `String` |
-| `Boolean` `Byte` `Short` `Integer` `Long` `Character` `Float` `Double` | boxed types |
-| `boolean_` `byte_` `short_` `int_` `long_` `char_` `float_` `double_` | primitives |
-| `of` | any Java type, via `@Of` |
+| `of` | Property declarations via `@Of` |
+| `removeAnnot` | Annotation types stripped from every generated field after merge |
+| `Extends` | Superclass of `<SimpleName>__Parameters` (`void.class` means none) |
+| `Implements` | Interfaces implemented by `<SimpleName>__Parameters` |
 
 When `@Of` omits `names`, the field is the decapitalized simple class name
 (`Address` → `address`). Types whose simple name is not a valid identifier
 (for example `Long` → `long`) must declare `names`.
-
-`@Parameters.removeAnnot` strips annotation types from every generated field
-after merge, including copies from member variables.
-
-The generated superclass can extend another class and implement interfaces:
-
-| Member | Role |
-| --- | --- |
-| `Extends` | Superclass of `<SimpleName>__Parameters` (`void.class` means none) |
-| `Implements` | Interfaces implemented by `<SimpleName>__Parameters` |
 
 `Extends` must be a non-final class with an accessible no-arg constructor.
 `Implements` must be interfaces. Generated getters and setters can satisfy those
@@ -150,17 +140,15 @@ import lombok.ToString;
 @Data
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
-@Parameters(
-    String = {"userName"},
-    Boolean = {"enabledFlag"},
-    Integer = {"id"},
-    Long = {"userId"},
-    int_ = {"countryCode", "cityCode", "areaCode"},
-    of = {
-        @Of(Class = Address.class, names = {"homeAddress"}),
-        @Of(Class = String[].class, names = {"tags"})
-    }
-)
+@Parameters(of = {
+    @Of(Class = String.class, names = {"userName"}),
+    @Of(Class = Boolean.class, names = {"enabledFlag"}),
+    @Of(Class = Integer.class, names = {"id"}),
+    @Of(Class = Long.class, names = {"userId"}),
+    @Of(Class = int.class, names = {"countryCode", "cityCode", "areaCode"}),
+    @Of(Class = Address.class, names = {"homeAddress"}),
+    @Of(Class = String[].class, names = {"tags"})
+})
 public class UserVO extends UserVO__Parameters {
 }
 ```
@@ -175,15 +163,10 @@ Lombok annotations on the subclass keep working. Use
 `@EqualsAndHashCode(callSuper = true)` and `@ToString(callSuper = true)` if
 Lombok should include the assembled properties.
 
-Shorthand members (`String`, `int_`, …) only supply names and types. Defaults
-and generic collections go on `@Of`, as in the next sections.
-
 ## Defaults
 
 Generated fields use ordinary Java defaults (`null`, `0`, `false`) unless you
-set an initializer.
-
-Per-name defaults are not available on shorthand members. Put them on `@Of`:
+set an initializer on `@Of`:
 
 ```java
 @Of(Class = String.class, names = {"status"}, initializer = "\"ACTIVE\""),
@@ -259,7 +242,7 @@ interfaces on `@Parameters` instead; they are copied onto the generated type:
 
 ```java
 @Parameters(
-    String = {"userName"},
+    of = @Of(Class = String.class, names = {"userName"}),
     Extends = BaseEntity.class,
     Implements = {Named.class, Serializable.class}
 )
@@ -331,25 +314,23 @@ import java.util.Map;
 @Data
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
-@Parameters(
-    String = {"userName"},
-    int_ = {"countryCode"},
-    of = {
-        @Of(Class = Address.class, names = {"homeAddress"}),
-        @Of(
-            Class = List.class,
-            typeArgs = {String.class},
-            names = {"roles"},
-            initializer = "java.util.Collections.emptyList()"),
-        @Of(
-            Class = Map.class,
-            typeArgs = {String.class, Address.class},
-            names = {"addresses"}),
-        @Of(
-            type = "java.util.List<java.util.Map<String, String>>",
-            names = {"attributes"})
-    }
-)
+@Parameters(of = {
+    @Of(Class = String.class, names = {"userName"}),
+    @Of(Class = int.class, names = {"countryCode"}),
+    @Of(Class = Address.class, names = {"homeAddress"}),
+    @Of(
+        Class = List.class,
+        typeArgs = {String.class},
+        names = {"roles"},
+        initializer = "java.util.Collections.emptyList()"),
+    @Of(
+        Class = Map.class,
+        typeArgs = {String.class, Address.class},
+        names = {"addresses"}),
+    @Of(
+        type = "java.util.List<java.util.Map<String, String>>",
+        names = {"attributes"})
+})
 public class ProfileVO extends ProfileVO__Parameters {
     @Deprecated
     private String status = "ACTIVE";

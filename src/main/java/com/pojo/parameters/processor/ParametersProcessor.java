@@ -67,13 +67,11 @@ public final class ParametersProcessor extends AbstractProcessor {
             error(element, "@Parameters cannot be placed on final classes; they must extend the generated superclass.");
             return;
         }
-        Parameters annotation = type.getAnnotation(Parameters.class);
-        if (annotation == null) {
+        if (type.getAnnotation(Parameters.class) == null) {
             return;
         }
         AssembledProperties properties = AssembledProperties.from(
                 type,
-                annotation,
                 parametersMirror(type),
                 processingEnv.getElementUtils(),
                 this::fieldInitializer,
