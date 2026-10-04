@@ -1,24 +1,11 @@
 package com.branchkit.vo;
 
-import com.pojo.parameters.Parameters;
-import com.pojo.parameters.Parameters.Of;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
-
-import java.io.Serializable;
+import com.pojo.parameters.Data;
+import com.pojo.parameters.Data.Of;
 
 /**
- * View object whose generated superclass extends {@link BaseVO} and implements
- * {@link Named} plus {@link Serializable}.
+ * View object assembled from {@code @Data} properties.
  */
-@Data
-@ToString(callSuper = true)
-@EqualsAndHashCode(callSuper = true)
-@Parameters(
-        of = @Of(Class = String.class, names = {"userName", "title"}),
-        Extends = BaseVO.class,
-        Implements = {Named.class, Serializable.class}
-)
-public class StaffVO extends StaffVO__Parameters {
+@Data(of = @Of(Class = String.class, names = {"userName", "title"}))
+public class StaffVO {
 }

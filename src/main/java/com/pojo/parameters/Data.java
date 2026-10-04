@@ -1,38 +1,22 @@
 package com.pojo.parameters;
 
-import java.lang.annotation.Annotation;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Lombok-style {@code @Data}: injects fields from {@code of}, plus getters, setters,
+ * {@code equals}, {@code hashCode}, and {@code toString} onto the annotated class.
+ * Does not generate a superclass.
+ */
 @Documented
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.SOURCE)
-public @interface Parameters {
+public @interface Data {
 
     Of[] of() default {};
-
-    /**
-     * Annotation types stripped from every generated field after merge,
-     * including mirrors copied from member variables. Matches by type, so
-     * {@code Size.class} removes {@code @Size(min = 1)}.
-     */
-    Class<? extends Annotation>[] removeAnnot() default {};
-
-    /**
-     * Superclass of the generated {@code <SimpleName>__Parameters} type.
-     * {@code void.class} (the default) means no {@code extends} clause.
-     * Must be a non-final class with an accessible no-arg constructor.
-     */
-    Class<?> Extends() default void.class;
-
-    /**
-     * Interfaces implemented by the generated {@code <SimpleName>__Parameters} type.
-     * Generated getters and setters can satisfy those contracts.
-     */
-    Class<?>[] Implements() default {};
 
     @Documented
     @Target({})

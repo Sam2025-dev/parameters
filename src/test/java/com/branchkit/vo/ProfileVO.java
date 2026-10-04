@@ -1,11 +1,8 @@
 package com.branchkit.vo;
 
 import com.branchkit.po.Address;
-import com.pojo.parameters.Parameters;
-import com.pojo.parameters.Parameters.Of;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
+import com.pojo.parameters.Data;
+import com.pojo.parameters.Data.Of;
 
 import java.util.List;
 import java.util.Map;
@@ -14,10 +11,7 @@ import java.util.Map;
  * Richer view object covering defaults, marker annotations, {@code List}/{@code Map},
  * and nested generics on {@code @Of}.
  */
-@Data
-@ToString(callSuper = true)
-@EqualsAndHashCode(callSuper = true)
-@Parameters(
+@Data(
         of = {
                 @Of(Class = String.class, names = {"userName"}),
                 @Of(Class = int.class, names = {"countryCode"}),
@@ -36,7 +30,7 @@ import java.util.Map;
                         names = {"attributes"})
         }
 )
-public class ProfileVO extends ProfileVO__Parameters {
+public class ProfileVO {
     @Deprecated
     private String status = "ACTIVE";
 }

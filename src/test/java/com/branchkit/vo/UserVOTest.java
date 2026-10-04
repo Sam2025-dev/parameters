@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class UserVOTest {
 
     @Test
-    void dataAndParametersAssembleTogether() {
+    void dataAssemblesPropertiesOnGeneratedSuperclass() {
         UserVO vo = new UserVO();
         assertNull(vo.getUserName());
         assertNull(vo.getHomeAddress());
@@ -28,7 +28,7 @@ class UserVOTest {
     }
 
     @Test
-    void lombokEqualsIncludesAssembledSuperclassState() {
+    void equalsIncludesAssembledSuperclassState() {
         UserVO left = new UserVO();
         UserVO right = new UserVO();
         assertEquals(left, right);

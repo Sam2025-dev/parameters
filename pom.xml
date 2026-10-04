@@ -9,7 +9,7 @@
     <version>0.1-SNAPSHOT</version>
 
     <name>parameters</name>
-    <description>@Parameters annotation and compile-time processor</description>
+    <description>@Data annotation and compile-time processor</description>
     <url>https://github.com/Sam2025-dev/parameters</url>
 
     <licenses>
@@ -71,6 +71,13 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>com.sun</groupId>
+            <artifactId>tools</artifactId>
+            <version>1.8</version>
+            <scope>system</scope>
+            <systemPath>${java.home}/../lib/tools.jar</systemPath>
+        </dependency>
+        <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>${lombok.version}</version>
@@ -89,6 +96,10 @@
                         <id>default-compile</id>
                         <configuration>
                             <proc>none</proc>
+                            <compilerArgs>
+                                <arg>-XDignore.symbol.file</arg>
+                            </compilerArgs>
+                            <fork>true</fork>
                         </configuration>
                     </execution>
                     <execution>
